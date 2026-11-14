@@ -1743,6 +1743,9 @@ function renderDecadesChart(d) {
   if (decadesState.chart) decadesState.chart.destroy();
   const opts = baseChartOptions(d.unit + ' / decade', 'top');
   opts.plugins.legend.display = false;
+  /* The x-axis is decade categories (1980s, 1990s, …), not a year
+     scale — the shared "Year" axis title only crowds the tick labels. */
+  opts.scales.x.title.display = false;
   decadesState.chart = new Chart($('decades-chart'), {
     type: 'bar',
     data: { labels, datasets: [{ label: 'Slope per decade (' + d.unit + ')', data, backgroundColor: colours }] },
@@ -2149,6 +2152,17 @@ if (yearSlider) {
       }
       applyYearWindow(start);
     }, 600);
+  });
+  /* A dragend / keyboard release also applies the final value at once:
+     if an automation (or a fast drag) never produced 'input' events,
+     the slider must still move when the thumb is released. */
+  yearSlider.addEventListener('change', () => {
+    const start = parseInt(yearSlider.value, 10);
+    const effective = start === 1880 ? null : start;
+    if (Number.isFinite(start) && effective !== mapWindow.start) {
+      clearTimeout(yearSliderTimer);
+      applyYearWindow(start);
+    }
   });
 }
 /* SLIDER-END */

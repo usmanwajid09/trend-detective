@@ -396,4 +396,16 @@ disclosure of AI tools used — this line is that disclosure.
   the About/footer basemap credits now name Esri World Street Map
   + World Boundaries and Places instead of the stale OpenStreetMap
   text. No data changed.
+- Fix round 5 (2026-11-14, same evening): the gate passed every
+  functional check but found one big visual defect — a full viewport
+  of blank white under the map, because the "Inspect a cell" panel
+  is much taller than the map column and the grid row stretches to
+  the taller column. Fixed in CSS, not by moving sections around:
+  on desktop (two-column layout only, above 1080px) the inspector
+  is capped at the map column's height (45rem) and scrolls inside
+  itself; below 1080px the layout is one column and the panel flows
+  normally. The slider also applies on release ('change' event), so
+  a drag that never produced 'input' events still moves the window.
+  The decades chart drops its crowded "Year" axis title (the axis is
+  decade categories, not a year scale). No data changed.
   Still open: Milestone 6 (final polish).

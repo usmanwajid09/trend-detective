@@ -114,6 +114,22 @@ def test_index_third_fix_round(client):
     assert "<th>Slope / dec</th>" in html
     assert "<th>Sig.</th>" in html
     assert "up to 10 in" in html
+    # Fix round 4 (same evening): the leaderboard ReferenceError that
+    # broke every window change, and the restore targeting the loaded
+    # window rather than the requested one.
+    assert "const short = picked" in html
+    assert "const loadedBefore" in html
+    assert "const restoreStart" in html
+    assert "Esri World Street Map" in html
+    assert "Esri, HERE, Garmin" in html
+    # Fix round 5: the inspector is capped at the map column's height
+    # (desktop only) so a tall cell panel cannot leave a blank hole
+    # under the map; the slider also applies on release, and the
+    # decades chart drops its crowded "Year" axis title.
+    assert "addEventListener('change'" in html
+    assert "opts.scales.x.title.display = false" in html
     assert "SQUARE" in html  # slopeColor comment: squared colour scale
     css = (Path(__file__).parent.parent / "static" / "style.css").read_text()
     assert "rgb(127,165,205)" in css  # legend gradient, same squared stops
+    assert "@media (min-width: 1081px)" in css
+    assert ".inspector { max-height: 45rem; overflow-y: auto; }" in css

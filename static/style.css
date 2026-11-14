@@ -420,6 +420,15 @@ footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 
    .table-wrap inside it scroll. min-width: 0 lets the wrap do its job. */
 .hotspots-grid > div { min-width: 0; }
 .work-grid > * { min-width: 0; }
+/* Desktop two-column layout only: cap the inspector at the map
+   column's height (~560px map + legend + stats ≈ 45rem) so a tall
+   cell panel cannot stretch the grid row and leave a blank hole
+   under the map — the panel scrolls inside itself instead. Below
+   1080px the grid is one column and the panel must flow normally,
+   so there is no cap there. */
+@media (min-width: 1081px) {
+  .inspector { max-height: 45rem; overflow-y: auto; }
+}
 .place-coords { font-size: 0.78rem; color: var(--muted); font-weight: 400; }
 #hotspots-section h3 { font-size: 1rem; margin: 0 0 0.55rem; }
 #hotspots-section .table-wrap { margin-top: 0; }
