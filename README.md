@@ -110,8 +110,9 @@ that contrast is the whole point of the tool. The 2024 global anomaly was
 The table above says Lahore shows *no* significant temperature trend — but
 that is only the NASA POWER point series. The GISTEMP 2° cell containing
 Lahore (centre 31°N, 75°E) **warms significantly over the same 1981–2024
-window: +0.26 °C/decade, p ≈ 1×10⁻⁵** (Mann-Kendall +0.25, p ≈ 6×10⁻⁵,
-95% CI +0.14 to +0.36). All eight neighbouring cells agree (+0.20 to +0.31
+window: +0.25 °C/decade, p ≈ 6×10⁻⁵** (Sen's slope, Mann-Kendall;
+95% CI +0.14 to +0.36). An OLS fit gives +0.26, p ≈ 1×10⁻⁵ — the same
+story. All eight neighbouring cells agree (+0.20 to +0.30
 °C/decade), so the GISTEMP cell is not an outlier — and over the full
 1880–2026 record it warms at +0.12 °C/decade, p ≈ 1×10⁻²⁷.
 
@@ -144,7 +145,7 @@ Temperature cells are untested where the early record is too sparse
 4. Switch region to **Lahore**. "Here's the honest complication: the POWER
    point series says Lahore shows no significant warming — minus 0.06 °C per
    decade, p = 0.52. But the GISTEMP map cell for Lahore says it *is*
-   warming, +0.26 °C per decade, highly significant — and so do all eight
+   warming, +0.25 °C per decade, highly significant — and so do all eight
    neighbouring cells. Two real NASA datasets, two different answers for the
    same city."
 5. Switch variable to **Precipitation** (still Lahore). "What *is* changing

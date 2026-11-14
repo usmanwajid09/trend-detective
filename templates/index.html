@@ -61,9 +61,9 @@
       <div class="fact-note">Significant &middot; p = 0.0009</div>
     </div>
     <div class="fact fact-disagree">
-      <div class="fact-num fact-num-small"><span data-count="-0.061" data-decimals="3">-0.061</span> vs <span data-count="0.26" data-decimals="2" data-prefix="+">+0.26</span> <span class="fact-unit">&deg;C / decade</span></div>
-      <div class="fact-label">Lahore temperature: two datasets, two answers</div>
-      <div class="fact-note">POWER: no trend (p = 0.53) &middot; GISTEMP cell: warming (p &asymp; 1&times;10<sup>&minus;5</sup>)</div>
+      <div class="fact-num fact-num-small"><span data-count="-0.061" data-decimals="3">-0.061</span><span class="fact-vs">vs</span><span data-count="0.25" data-decimals="2" data-prefix="+">+0.25</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-label">Lahore temperature, 1981&ndash;2024: two datasets, two answers</div>
+      <div class="fact-note">POWER: no trend (p = 0.53) &middot; GISTEMP cell: warming (p &asymp; 6&times;10<sup>&minus;5</sup>)</div>
     </div>
     <div class="fact">
       <div class="fact-num"><span data-count="0.153" data-decimals="3" data-prefix="+">+0.153</span> <span class="fact-unit">mm/day / decade</span></div>
@@ -108,9 +108,15 @@
         </div>
         <div class="legend" aria-label="Map legend">
           <span class="legend-title">Trend per decade, significant cells only (q &le; 0.05)</span>
-          <span class="legend-item"><span class="swatch" style="background:#2166ac"></span>Cooling / drier</span>
-          <span class="legend-item"><span class="swatch" style="background:#f7f7f7"></span>No change</span>
-          <span class="legend-item"><span class="swatch" style="background:#b2182b"></span>Warming / wetter</span>
+          <span class="legend-scale">
+            <span class="legend-item">Cooling / drier</span>
+            <span class="legend-end" id="legend-min">&minus;0.98</span>
+            <span class="legend-gradient" role="img" aria-label="Colour scale: dark blue for strong cooling through white (no change) to dark red for strong warming"></span>
+            <span class="legend-end" id="legend-max">+0.98</span>
+            <span class="legend-unit" id="legend-unit">&deg;C / decade</span>
+            <span class="legend-item">Warming / wetter</span>
+          </span>
+          <span class="legend-item">White = no change (0)</span>
           <span class="legend-item"><span class="swatch" style="background:#8a97a5"></span>Tested, not significant</span>
           <span class="legend-item"><span class="swatch" style="background:transparent;border:1px solid #8a97a5"></span>No data</span>
         </div>
@@ -138,11 +144,12 @@
               <figcaption id="story-photo-caption"></figcaption>
             </figure>
             <dl class="cell-stats">
-              <div class="cell-stat"><dt>Sen&rsquo;s slope</dt><dd id="cell-chip-slope">&mdash;</dd></div>
+              <div class="cell-stat"><dt id="cell-chip-slope-label">Sen&rsquo;s slope</dt><dd id="cell-chip-slope">&mdash;</dd></div>
               <div class="cell-stat"><dt>p-value</dt><dd id="cell-chip-p">&mdash;</dd></div>
               <div class="cell-stat"><dt>q-value (BH)</dt><dd id="cell-chip-q">&mdash;</dd></div>
               <div class="cell-stat"><dt>95% CI / decade</dt><dd id="cell-chip-ci">&mdash;</dd></div>
             </dl>
+            <p id="cell-window" class="note"></p>
             <div class="chart-tools" role="group" aria-label="Zoom the cell chart">
               <span>Zoom:</span>
               <button type="button" data-cell-zoom="out" aria-label="Zoom out">&minus;</button>
@@ -155,8 +162,8 @@
             <p id="cell-meta" class="note"></p>
             <p id="lahore-note" class="callout" hidden><strong>The honest complication:</strong>
             the POWER point series for Lahore says no significant warming
-            (&minus;0.061 &deg;C/decade, p = 0.53), while this GISTEMP cell says it
-            <em>is</em> warming (+0.26 &deg;C/decade, p &asymp; 1&times;10<sup>&minus;5</sup>)
+            (&minus;0.061 &deg;C/decade, 1981&ndash;2024, p = 0.53), while this GISTEMP cell says it
+            <em>is</em> warming over the same window (+0.25 &deg;C/decade, p &asymp; 6&times;10<sup>&minus;5</sup>)
             &mdash; and all eight neighbouring cells agree. Two real NASA
             datasets, two different answers for the same city.</p>
             <div class="compare-controls">
@@ -281,9 +288,9 @@
       </article>
     </div>
     <p class="callout"><strong>The honest complication:</strong> for Lahore,
-    NASA POWER says no significant warming (&minus;0.061 &deg;C/decade, p = 0.53) while
-    the GISTEMP cell says it <em>is</em> warming (+0.26 &deg;C/decade,
-    p &asymp; 1&times;10<sup>&minus;5</sup>) &mdash; and all eight neighbouring cells agree. Two real NASA
+    NASA POWER says no significant warming (&minus;0.061 &deg;C/decade, 1981&ndash;2024, p = 0.53) while
+    the GISTEMP cell says it <em>is</em> warming (+0.25 &deg;C/decade, 1981&ndash;2024,
+    p &asymp; 6&times;10<sup>&minus;5</sup>) &mdash; and all eight neighbouring cells agree. Two real NASA
     datasets, two different answers for the same city.</p>
   </section>
 
@@ -330,9 +337,9 @@
         only 86 cooling. Lahore&rsquo;s rain is significantly up
         (+0.153 mm/day/decade).</p>
         <p>The honest complication: for Lahore, NASA POWER says no
-        significant warming (&minus;0.061 &deg;C/decade, p = 0.53) while the
-        GISTEMP cell says it <em>is</em> warming (+0.26 &deg;C/decade,
-        p &asymp; 1&times;10<sup>&minus;5</sup>). Two real NASA datasets, two
+        significant warming (&minus;0.061 &deg;C/decade, 1981&ndash;2024, p = 0.53) while the
+        GISTEMP cell says it <em>is</em> warming (+0.25 &deg;C/decade, 1981&ndash;2024,
+        p &asymp; 6&times;10<sup>&minus;5</sup>). Two real NASA datasets, two
         different answers for the same city.</p>
       </article>
       <article class="about-item">
@@ -364,7 +371,7 @@
     false-discovery control at 5%. &ldquo;Significant&rdquo; means p &lt; 0.05 for a
     point series and q &le; 0.05 for a map cell. No data is invented &mdash; the
     app serves the cached downloads in <code>data/</code>. Basemap &copy;
-    OpenStreetMap contributors &copy; CARTO.</p>
+    OpenStreetMap contributors.</p>
     <p>AI disclosure: this starter was built with AI assistance (Muse).
     Team Overthinkers &middot; NASA Space Apps Challenge 2026.</p>
   </footer>
@@ -373,7 +380,7 @@
 <script>
 /* Trend Detective front-end.
    Data comes only from /api/series, /api/summary, /api/map, /api/cell.
-   The map is Leaflet over a CartoDB Positron basemap; the trend grid is
+   The map is Leaflet over OpenStreetMap tiles; the trend grid is
    painted onto #map-canvas and shown as a Leaflet imageOverlay, so it
    stays aligned while panning and zooming. */
 const $ = (id) => document.getElementById(id);
@@ -390,9 +397,31 @@ function fmtSigned(x, d) {
   if (x === null || x === undefined || Number.isNaN(x)) return 'n/a';
   return (x >= 0 ? '+' : '') + x.toFixed(d === undefined ? 3 : d);
 }
+const SUP = { '-': '\u207B', '0': '\u2070', '1': '\u00B9', '2': '\u00B2', '3': '\u00B3', '4': '\u2074', '5': '\u2075', '6': '\u2076', '7': '\u2077', '8': '\u2078', '9': '\u2079' };
+function supNum(n) { return String(n).split('').map((ch) => SUP[ch] || ch).join(''); }
+/* Bare scientific value. Never renders "0" or "0.0e+0": a p-value that
+   underflows to exactly 0 is honestly "smaller than 0.001". */
+function fmtSci(x) {
+  if (x === null || x === undefined || Number.isNaN(x)) return 'n/a';
+  if (x <= 0) return '< 0.001';
+  if (x < 0.001) {
+    const e = x.toExponential(1).split('e');
+    return parseFloat(e[0]).toFixed(1) + '\u00D710' + supNum(parseInt(e[1], 10));
+  }
+  if (x < 0.01) return x.toFixed(4);
+  return x.toFixed(3);
+}
 function fmtP(p) {
-  if (p === null || p === undefined) return 'n/a';
-  return p < 0.01 ? p.toExponential(1) : p.toFixed(3);
+  if (p === null || p === undefined || Number.isNaN(p)) return 'p = n/a';
+  if (p <= 0) return 'p < 0.001';
+  if (p < 0.001) return 'p \u2248 ' + fmtSci(p);
+  return 'p = ' + fmtSci(p);
+}
+function fmtQ(q) {
+  if (q === null || q === undefined || Number.isNaN(q)) return 'q = n/a';
+  if (q <= 0) return 'q < 0.001';
+  if (q < 0.001) return 'q \u2248 ' + fmtSci(q);
+  return 'q = ' + fmtSci(q);
 }
 function fmtLatLon(lat, lon) {
   const la = Math.abs(lat) + '\u00B0' + (lat >= 0 ? 'N' : 'S');
@@ -400,6 +429,100 @@ function fmtLatLon(lat, lon) {
   return la + ', ' + lo;
 }
 function normLon(lon) { return ((lon + 180) % 360 + 360) % 360 - 180; }
+
+/* ---------- Mann-Kendall + Sen's slope, in the browser ----------
+   Mirrors stats/mannkendall.py exactly (Hamed-Rao lag-3 correction,
+   Gilbert 95% CI for Sen's slope), so the cell panel can test any year
+   window without a server round-trip. Verified against the Python
+   module: Lahore full record slope 0.1218 / CI [0.1001, 0.1426],
+   Lahore 1981-2024 slope 0.2456 / p 5.7e-05 / CI [0.1369, 0.3595]. */
+function mkMedian(sorted) {
+  const n = sorted.length, m = Math.floor(n / 2);
+  return n % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2;
+}
+function normCdf(z) {
+  const s = z < 0 ? -1 : 1, x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return 0.5 * (1 + s * y);
+}
+function rankAverage(arr) {
+  const idx = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+  const ranks = new Array(arr.length);
+  let i = 0;
+  while (i < idx.length) {
+    let j = i;
+    while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[idx[k][1]] = avg;
+    i = j + 1;
+  }
+  return ranks;
+}
+function acfBiased(x, nlags) {
+  const mean = x.reduce((a, b) => a + b, 0) / x.length;
+  const y = x.map((v) => v - mean);
+  const denom = y.reduce((a, b) => a + b * b, 0);
+  if (!denom) return new Array(nlags + 1).fill(0);
+  const out = [1];
+  for (let k = 1; k <= nlags; k++) {
+    let s = 0;
+    for (let i = 0; i < x.length - k; i++) s += y[i] * y[i + k];
+    out.push(s / denom);
+  }
+  return out;
+}
+function mannKendallSen(years, values, startYear, endYear) {
+  const pts = [];
+  for (let i = 0; i < years.length; i++) {
+    const v = values[i];
+    if (v === null || v === undefined || !Number.isFinite(v)) continue;
+    if (startYear !== undefined && years[i] < startYear) continue;
+    if (endYear !== undefined && years[i] > endYear) continue;
+    pts.push([years[i], v]);
+  }
+  pts.sort((a, b) => a[0] - b[0]);
+  const n = pts.length;
+  if (n < 3) return null;
+  const x = pts.map((p) => p[1]), t = pts.map((p) => p[0]);
+  let s = 0;
+  for (let k = 0; k < n - 1; k++)
+    for (let j = k + 1; j < n; j++) s += Math.sign(x[j] - x[k]);
+  const counts = {};
+  for (const v of x) counts[v] = (counts[v] || 0) + 1;
+  let tieSum = 0;
+  for (const c of Object.values(counts))
+    if (c > 1) tieSum += c * (c - 1) * (2 * c + 5);
+  let varS = (n * (n - 1) * (2 * n + 5) - tieSum) / 18;
+  const slopes = [];
+  for (let i = 0; i < n; i++)
+    for (let j = i + 1; j < n; j++) slopes.push((x[j] - x[i]) / (t[j] - t[i]));
+  slopes.sort((a, b) => a - b);
+  const slope = mkMedian(slopes);
+  const detrend = x.map((v, i) => v - (i + 1) * slope);
+  const acf = acfBiased(rankAverage(detrend), 3);
+  const interval = 1.959963984540054 / Math.sqrt(n);
+  let sni = 0;
+  for (let k = 1; k <= 3; k++)
+    if (Math.abs(acf[k]) > interval) sni += (n - k) * (n - k - 1) * (n - k - 2) * acf[k];
+  const factor = n > 2 ? 1 + (2 / (n * (n - 1) * (n - 2))) * sni : 1;
+  const corrected = varS * factor;
+  if (corrected > 0) varS = corrected;
+  const z = varS <= 0 ? 0 : (s > 0 ? (s - 1) / Math.sqrt(varS) : (s < 0 ? (s + 1) / Math.sqrt(varS) : 0));
+  const p = 2 * (1 - normCdf(Math.abs(z)));
+  const N = slopes.length, C = 1.959963984540054 * Math.sqrt(varS);
+  const rankVal = (r) => {
+    const pos = Math.min(Math.max(r - 1, 0), N - 1);
+    const lo = Math.floor(pos), hi = Math.min(lo + 1, N - 1), f = pos - lo;
+    return slopes[lo] + f * (slopes[hi] - slopes[lo]);
+  };
+  return {
+    slope_per_decade: slope * 10,
+    ci_lo_per_decade: rankVal((N - C) / 2) * 10,
+    ci_hi_per_decade: rankVal((N + C) / 2) * 10,
+    p_value: p, n,
+  };
+}
 
 /* ---------- Animated counters (key-findings strip) ---------- */
 function animateCounters() {
@@ -487,29 +610,40 @@ function bindZoomButtons(attrName, getChart) {
     });
   });
 }
-function baseChartOptions(yLabel) {
+function baseChartOptions(yLabel, legendPosition) {
   return {
     responsive: true,
     animation: { duration: 600 },
-    plugins: { legend: { display: true } },
+    /* Short legend labels + small boxes: the legend must stay on one or
+       two lines and never eat the plot or overlap the tick labels. */
+    plugins: { legend: { display: true, position: legendPosition || 'top',
+      labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 6, usePointStyle: true } } },
     scales: {
       x: { title: { display: true, text: 'Year' } },
       y: { title: { display: true, text: yLabel } }
     }
   };
 }
-function trendLineDatasets(d, colour) {
+function trendLineDatasets(d, colour, tag) {
   if (!d.trend) return [];
+  const suffix = tag ? ' (' + tag + ')' : '';
   const slopeYr = d.trend.slope_per_decade / 10;
   const loYr = d.trend.ci_lo_per_decade / 10;
   const hiYr = d.trend.ci_hi_per_decade / 10;
-  const line = (s) => d.years.map((y) => d.trend.median_value + s * (y - d.trend.median_year));
+  /* Draw the line only over years the cell actually has data. Drawing it
+     across the whole axis extrapolates far beyond the fitted window
+     (a cell with 52 years of data would get a line spanning 147 years),
+     which stretched the y-axis and flattened the series. */
+  const line = (s) => d.years.map((y, i) =>
+    (d.values[i] === null || d.values[i] === undefined)
+      ? null
+      : d.trend.median_value + s * (y - d.trend.median_year));
   return [
-    { label: 'Trend (Sen\u2019s slope)', data: line(slopeYr),
+    { label: 'Trend' + suffix, data: line(slopeYr),
       borderColor: colour, borderDash: [6, 4], pointRadius: 0, tension: 0 },
-    { label: '95% CI (low)', data: line(loYr),
+    { label: 'CI low' + suffix, data: line(loYr),
       borderColor: 'rgba(178,24,43,0.30)', pointRadius: 0, tension: 0 },
-    { label: '95% CI (high)', data: line(hiYr),
+    { label: 'CI high' + suffix, data: line(hiYr),
       borderColor: 'rgba(178,24,43,0.30)',
       backgroundColor: 'rgba(178,24,43,0.10)', fill: '-1',
       pointRadius: 0, tension: 0 },
@@ -533,8 +667,8 @@ function loadSeriesInto(d) {
     d.region + ' \u00B7 ' + d.variable + ' \u00B7 ' +
     d.trend.start_year + '\u2013' + d.trend.end_year + ' \u00B7 ' +
     'n = ' + d.trend.n + ' \u00B7 slope ' + d.trend.slope_per_decade.toFixed(3) +
-    ' ' + d.unit + '/decade \u00B7 p = ' +
-    (d.trend.p_value === null ? 'n/a' : fmtP(d.trend.p_value)) +
+    ' ' + d.unit + '/decade \u00B7 ' +
+    fmtP(d.trend.p_value) +
     ' \u00B7 r = ' + d.trend.r.toFixed(2) + ' \u00B7 Source: ' + d.source;
   $('note').textContent = d.note;
 }
@@ -719,15 +853,15 @@ const cellState = { chart: null };
 const CELL_PX = 4;  /* canvas pixels per grid cell (2x for a 2-degree grid) */
 
 function slopeColor(slope, maxAbs) {
+  /* Diverging blue -> white -> red, exactly the legend's endpoints:
+     cooling #2166ac (33,102,172), no change #f7f7f7 (247,247,247),
+     warming #b2182b (178,24,43). No cyan anywhere: a tiny warming and a
+     tiny cooling both start from white, not from pale cyan. */
   const t = Math.max(-1, Math.min(1, slope / maxAbs));
-  if (t >= 0) {
-    const g = Math.round(247 - (247 - 24) * t);
-    const b = Math.round(247 - (247 - 43) * t);
-    return 'rgb(178,' + g + ',' + b + ')';
-  }
-  const g = Math.round(247 - (247 - 102) * -t);
-  const b = Math.round(247 - (247 - 172) * -t);
-  return 'rgb(' + Math.round(178 - (178 - 33) * -t) + ',' + g + ',' + b + ')';
+  const lerp = (a, b, f) => Math.round(a + (b - a) * f);
+  if (t >= 0) return 'rgb(' + lerp(247, 178, t) + ',' + lerp(247, 24, t) + ',' + lerp(247, 43, t) + ')';
+  const f = -t;
+  return 'rgb(' + lerp(247, 33, f) + ',' + lerp(247, 102, f) + ',' + lerp(247, 172, f) + ')';
 }
 
 /* Paint the trend grid onto #map-canvas and return a data URL for the
@@ -774,6 +908,11 @@ function paintOverlay() {
     tested.toLocaleString() + ' cells tested \u00B7 ' + sig.toLocaleString() + ' significant ' +
     'after Benjamini-Hochberg (q \u2264 0.05) \u00B7 colour scale \u00B1' +
     maxAbs.toFixed(2) + ' ' + mapData.unit + '/decade';
+  /* Keep the legend's scale labels on the same numbers as the paint. */
+  const legendMin = $('legend-min'), legendMax = $('legend-max'), legendUnit = $('legend-unit');
+  if (legendMin) legendMin.textContent = '\u2212' + maxAbs.toFixed(2);
+  if (legendMax) legendMax.textContent = '+' + maxAbs.toFixed(2);
+  if (legendUnit) legendUnit.textContent = mapData.unit + ' / decade';
   return mapCanvas.toDataURL('image/png');
 }
 
@@ -796,9 +935,8 @@ function initLeaflet() {
     maxBoundsViscosity: 1.0,
     zoomControl: true,
   }).setView([28, 10], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
   }).addTo(leafletMap);
   leafletMap.on('mousemove', onMapMouseMove);
@@ -836,7 +974,7 @@ function onMapMouseMove(e) {
     html = '<strong>' + fmtLatLon(c.lat, c.lon) + '</strong><br>' +
       fmtSigned(s, 2) + ' ' + mapData.unit + '/decade<br>' +
       (sig
-        ? '<span class="tt-sig">Significant \u00B7 q = ' + (q !== null ? q.toExponential(1) : 'n/a') + '</span>'
+        ? '<span class="tt-sig">Significant \u00B7 ' + fmtQ(q) + '</span>'
         : '<span class="tt-nosig">Not significant</span>');
   }
   mapTooltip.innerHTML = html;
@@ -897,17 +1035,16 @@ function placeMarkers() {
 
 /* ---------- Cell inspector + compare mode ---------- */
 function setChip(id, text) { $(id).textContent = text; }
-function cellDatasets(d, colour, labelSuffix) {
+function cellDatasets(d, colour, tag) {
   const sets = [{
-    label: 'Cell ' + d.cell_lat + '\u00B0, ' + d.cell_lon + '\u00B0 \u2014 ' + d.variable +
-      ' (' + d.unit + ')' + (labelSuffix ? ' ' + labelSuffix : ''),
+    label: 'Cell ' + d.cell_lat + '\u00B0, ' + d.cell_lon + '\u00B0' + (tag ? ' (' + tag + ')' : ''),
     data: d.values,
     borderColor: colour,
     backgroundColor: colour === '#1d5fa8' ? 'rgba(29,95,168,0.08)' : 'rgba(178,106,0,0.08)',
     pointRadius: 2, pointBackgroundColor: colour,
     tension: 0.1,
   }];
-  if (d.trend) sets.push.apply(sets, trendLineDatasets(d, '#b2182b'));
+  if (d.trend) sets.push.apply(sets, trendLineDatasets(d, '#b2182b', tag));
   return sets;
 }
 function renderCellChart() {
@@ -915,13 +1052,32 @@ function renderCellChart() {
   const p = primaryCell.payload;
   const datasets = cellDatasets(p, '#1d5fa8', '');
   if (compareCell) {
-    datasets.push.apply(datasets, cellDatasets(compareCell.payload, '#b26a00', '(comparison)'));
+    datasets.push.apply(datasets, cellDatasets(compareCell.payload, '#b26a00', 'B'));
+  }
+  /* The y-axis follows the plotted series (the data), not the trend or
+     CI lines: a wide confidence band must not stretch the axis until the
+     series are flat lines near zero. Bands are still drawn; anything
+     outside the data range simply clips at the edge. */
+  let lo = Infinity, hi = -Infinity;
+  [p, compareCell ? compareCell.payload : null].forEach((d) => {
+    if (!d) return;
+    d.values.forEach((v) => {
+      if (v === null || v === undefined) return;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    });
+  });
+  const opts = baseChartOptions(p.variable + ' (' + p.unit + ')', 'bottom');
+  if (Number.isFinite(lo) && Number.isFinite(hi)) {
+    const pad = Math.max((hi - lo) * 0.12, 0.05);
+    opts.scales.y.min = lo - pad;
+    opts.scales.y.max = hi + pad;
   }
   if (cellState.chart) cellState.chart.destroy();
   cellState.chart = new Chart($('cell-chart'), {
     type: 'line',
     data: { labels: p.years, datasets },
-    options: baseChartOptions(p.variable + ' (' + p.unit + ')'),
+    options: opts,
   });
 }
 function renderComparePanel() {
@@ -930,12 +1086,11 @@ function renderComparePanel() {
   panel.hidden = false;
   const row = (tag, d) => {
     const t = d.payload.trend;
-    const q = (t && t.q_value !== null && t.q_value !== undefined) ? t.q_value.toExponential(1) : 'n/a';
     return '<tr><td><strong>' + tag + '</strong></td>' +
       '<td>' + d.lat + '\u00B0, ' + d.lon + '\u00B0</td>' +
       '<td class="num">' + (t ? fmtSigned(t.slope_per_decade) + ' ' + d.payload.unit + '/decade' : '\u2014') + '</td>' +
-      '<td>' + (t ? fmtP(t.p_value) : '\u2014') + '</td>' +
-      '<td>' + q + '</td></tr>';
+      '<td>' + (t ? fmtSci(t.p_value) : '\u2014') + '</td>' +
+      '<td>' + (t ? fmtSci(t.q_value) : '\u2014') + '</td></tr>';
   };
   $('compare-body').innerHTML = row('A', primaryCell) + row('B', compareCell);
   $('compare-verdicts').textContent =
@@ -956,19 +1111,37 @@ function showCell(d) {
     (d.trend ? ' \u00B7 Sen\u2019s slope ' + fmtSigned(d.trend.slope_per_decade) + ' ' + d.unit + '/decade ' +
       '(95% CI ' + fmtSigned(d.trend.ci_lo_per_decade) + ' to ' +
       fmtSigned(d.trend.ci_hi_per_decade) + ') \u00B7 ' +
-      'p = ' + fmtP(d.trend.p_value) +
+      fmtP(d.trend.p_value) +
       (d.trend.q_value !== null && d.trend.q_value !== undefined
-        ? ' \u00B7 q = ' + d.trend.q_value.toExponential(1) : '') : '');
+        ? ' \u00B7 ' + fmtQ(d.trend.q_value) : '') : '');
   if (d.trend) {
+    $('cell-chip-slope-label').textContent =
+      'Sen\u2019s slope \u00B7 ' + d.years[0] + '\u2013' + d.years[d.years.length - 1];
     setChip('cell-chip-slope', fmtSigned(d.trend.slope_per_decade) + ' ' + d.unit + '/decade');
-    setChip('cell-chip-p', fmtP(d.trend.p_value));
-    setChip('cell-chip-q', (d.trend.q_value !== null && d.trend.q_value !== undefined)
-      ? d.trend.q_value.toExponential(1) : 'n/a');
+    setChip('cell-chip-p', fmtSci(d.trend.p_value));
+    setChip('cell-chip-q', fmtSci(d.trend.q_value));
     setChip('cell-chip-ci',
       fmtSigned(d.trend.ci_lo_per_decade) + ' to ' + fmtSigned(d.trend.ci_hi_per_decade));
   } else {
+    $('cell-chip-slope-label').textContent = 'Sen\u2019s slope';
     setChip('cell-chip-slope', '\u2014'); setChip('cell-chip-p', '\u2014');
     setChip('cell-chip-q', '\u2014'); setChip('cell-chip-ci', '\u2014');
+  }
+  /* The headline slope above is the full record. Show the 1981-2024
+     window beside it — same Mann-Kendall test, run in the browser — so
+     the story numbers reconcile with this panel instead of looking like
+     a contradiction. */
+  const win = mannKendallSen(d.years, d.values, 1981, 2024);
+  const winEl = $('cell-window');
+  if (win && win.n >= 10) {
+    winEl.textContent = '1981\u20132024 window (same test): ' +
+      fmtSigned(win.slope_per_decade) + ' ' + d.unit + '/decade \u00B7 ' +
+      fmtP(win.p_value) + ' \u00B7 n = ' + win.n +
+      ' \u00B7 95% CI ' + fmtSigned(win.ci_lo_per_decade) + ' to ' +
+      fmtSigned(win.ci_hi_per_decade) + ' ' + d.unit + '/decade.';
+  } else {
+    winEl.textContent = '1981\u20132024 window: too few years with data to test (n = ' +
+      (win ? win.n : 0) + ').';
   }
   /* The Lahore disagreement note appears only for the Lahore temperature cell. */
   $('lahore-note').hidden =
@@ -982,6 +1155,10 @@ async function fetchCell(lat, lon) {
 }
 async function selectPrimary(lat, lon) {
   compareArmed = false;
+  /* A new primary cell ends any old comparison: the pinned B cell belonged
+     to the previous inspection (and possibly the previous variable). */
+  compareCell = null;
+  $('compare-clear').hidden = true;
   hideStoryPhoto();
   $('compare-hint').hidden = true;
   $('compare-pin').textContent = 'Pin a second cell to compare';
@@ -1051,8 +1228,8 @@ async function presetFastest(variable, kind) {
   showPresetPhoto(kind);
 }
 async function presetLahore() {
-  setPresetNote('Lahore: NASA POWER says no significant warming (\u22120.061 \u00B0C/decade, p = 0.53); ' +
-    'the GISTEMP cell says it is warming (+0.26 \u00B0C/decade, p \u2248 1\u00D710\u207B\u2075) \u2014 and all eight neighbouring cells agree.');
+  setPresetNote('Lahore: NASA POWER says no significant warming (\u22120.061 \u00B0C/decade, 1981\u20132024, p = 0.53); ' +
+    'the GISTEMP cell says it is warming (+0.25 \u00B0C/decade, 1981\u20132024, p \u2248 6\u00D710\u207B\u2075) \u2014 and all eight neighbouring cells agree.');
   await gotoCell(31.52, 74.36, 'temperature');
   showPresetPhoto('lahore');
 }
@@ -1077,7 +1254,20 @@ $('compare-clear').addEventListener('click', () => {
   renderComparePanel();
   placeMarkers();
 });
-mapVarSel.addEventListener('change', () => { mapData = null; hideStoryPhoto(); loadMap(); });
+mapVarSel.addEventListener('change', async () => {
+  mapData = null;
+  /* Switching variable ends any comparison (the pinned cell was measured
+     in the old variable's units) and re-fetches the inspected cell, if
+     any, under the new variable so the panel never shows stale units. */
+  compareCell = null; compareArmed = false;
+  $('compare-clear').hidden = true; $('compare-hint').hidden = true;
+  $('compare-pin').textContent = 'Pin a second cell to compare';
+  renderComparePanel();
+  hideStoryPhoto();
+  await loadMap();
+  placeMarkers();
+  if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
+});
 
 wireZoom($('chart'), () => seriesState.chart);
 wireZoom($('cell-chart'), () => cellState.chart);

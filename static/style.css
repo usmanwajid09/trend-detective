@@ -96,6 +96,7 @@ section { margin-top: 1.75rem; }
 .fact-label { font-size: 0.88rem; color: var(--ink); margin-top: 0.35rem; line-height: 1.4; }
 .fact-note { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
 .fact-disagree .fact-num { color: var(--gold); }
+.fact-vs { margin: 0 0.32em; font-size: 0.72em; font-weight: 700; color: var(--muted); }
 
 /* ---------- Section heads ---------- */
 .section-head h2, .card-head h2 { font-size: 1.3rem; margin: 0 0 0.3rem; font-weight: 800; }
@@ -242,6 +243,19 @@ select:disabled { opacity: 0.5; }
 }
 .legend-title { font-weight: 600; color: var(--ink); margin-right: 0.25rem; }
 .legend-item { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+/* Continuous scale bar: the same blue -> white -> red the overlay paints,
+   so legend and map agree cell-for-cell. */
+.legend-scale { display: inline-flex; align-items: center; gap: 0.45rem; }
+.legend-gradient {
+  display: inline-block; width: 170px; height: 12px; flex: none;
+  border: 1px solid var(--line-dark); border-radius: 2px;
+  background: linear-gradient(90deg, #2166ac, #f7f7f7 50%, #b2182b);
+}
+.legend-end {
+  font-variant-numeric: tabular-nums; font-weight: 700;
+  color: var(--ink); font-size: 0.84rem; white-space: nowrap;
+}
+.legend-unit { font-size: 0.84rem; color: var(--muted); white-space: nowrap; }
 .swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px; }
 .map-tooltip {
   position: absolute; z-index: 600; pointer-events: none;
