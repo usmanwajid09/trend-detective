@@ -424,7 +424,7 @@ footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 
 #hotspots-section h3 { font-size: 1rem; margin: 0 0 0.55rem; }
 #hotspots-section .table-wrap { margin-top: 0; }
 .report-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-top: 1rem; }
-.inspector #decades-section { margin-top: 1.25rem; }
+#decades-section { margin-top: 1.25rem; }
 #decades-section h3 { font-size: 1rem; margin: 1.1rem 0 0.5rem; }
 #decades-chart { max-height: 260px; }
 #map-season-label { font-weight: 700; color: var(--ink); }

@@ -23,7 +23,7 @@ python3 -m venv .venv
 # open http://127.0.0.1:5000
 ```
 
-Tests: `.venv/bin/python -m pytest tests/ -q` (126 tests, all passing).
+Tests: `.venv/bin/python -m pytest tests/ -q` (127 tests, all passing).
 
 To re-download the data: `.venv/bin/python -m src.fetch_data`
 (it only writes real downloads — a failed download is reported, never faked).
@@ -260,7 +260,7 @@ data/             cached real downloads (POWER JSON x2, GISTEMP CSV)
 data/grid/        committed caches: annual means + precomputed trend maps
                   (annual + seasonal DJF/MAM/JJA/SON, both variables)
 data/raw/         raw NetCDF (git-ignored, re-downloadable)
-tests/            pytest: trend maths + Flask routes (126 tests)
+tests/            pytest: trend maths + Flask routes (127 tests)
 .github/workflows/ci.yml   pytest on every push
 ```
 
@@ -369,4 +369,31 @@ disclosure of AI tools used — this line is that disclosure.
   visible at desktop width without an inner scrollbar. The
   leaderboard intro now says "up to 10 in each direction" — a short
   window can have fewer than ten qualifying cooling cells.
+- Fix round 4 (2026-11-14, same evening): the live gate caught a
+  regression the round-3 tests missed — every load showed "Could not
+  draw the trend map (groups is not defined)" and every year-window
+  change failed. Cause: the leaderboard extraction moved the group
+  definitions into `pickLeaderboardGroups` but left the short-list
+  computation in `renderLeaderboard` still referencing the old
+  `groups` variable; the throw inside `loadMap` turned every window
+  change into an 'error' + restore. Fixed by capturing the picked
+  groups once and reusing them, and the slider harness now runs the
+  REAL `renderLeaderboard` (it used to stub it out — that is why the
+  bug slipped through) and asserts the leaderboard renders on load.
+  The restore path is also fixed in two ways: it restores to the
+  window that was actually loaded (tracked separately from the
+  previously REQUESTED window — the old code once restored to an
+  intermediate 1954 that never loaded, leaving the heading claiming
+  1954–2026 while everything else showed the full record), and it
+  distinguishes a fetch failure (map data untouched — just reset
+  slider/labels/cell) from a paint failure after the new payload was
+  assigned (refetch the previous window, then sync the cell panel).
+  The slider label now shows "· loading…" while a window is
+  pending, and a failure note left over from an earlier attempt
+  clears when the slider returns to the current window. The
+  "Is it speeding up?" section moved out of the side column to a
+  full-width row (it left a blank left column while scrolling), and
+  the About/footer basemap credits now name Esri World Street Map
+  + World Boundaries and Places instead of the stale OpenStreetMap
+  text. No data changed.
   Still open: Milestone 6 (final polish).

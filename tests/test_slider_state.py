@@ -145,7 +145,10 @@ function paintOverlay() {
     ' · ' + d._tested.toLocaleString() + ' cells tested · ' + d._sig.toLocaleString() + ' significant';
   return 'data:image/png;base64,x';
 }
-function renderLeaderboard() {}
+/* renderLeaderboard is NOT stubbed here: the 2026-11-14 ReferenceError
+   ('groups is not defined') slipped through precisely because the
+   harness stubbed it out while the shipped page ran the real one.
+   The real function is extracted from the template below. */
 async function selectPrimary(lat, lon) {
   const d = await fetchCell(lat, lon);
   primaryCell = { lat: d.cell_lat, lon: d.cell_lon, payload: d };
@@ -167,6 +170,8 @@ function state(tag) {
     panel: panelWindow,
     panelSlope,
     note: $('year-window-note').textContent,
+    lb: $('leaderboard-tbody').innerHTML,
+    lbNote: $('leaderboard-note').textContent,
   };
 }
 async function setSlider(value, pauseMs) {
@@ -239,6 +244,10 @@ def _run_harness():
         _extract(html, "/* LOADMAP-START */", "/* LOADMAP-END */"),
         _extract(html, "/* FETCHCELL-START */", "/* FETCHCELL-END */"),
         _extract(html, "/* SLIDER-START */", "/* SLIDER-END */"),
+        _extract(html, "/* FMT-START */", "/* FMT-END */"),
+        _extract(html, "/* DEDUP-START */", "/* DEDUP-END */"),
+        _extract(html, "/* LEADERBOARD-PURE-START", "/* LEADERBOARD-PURE-END */"),
+        _extract(html, "/* LEADERBOARD-RENDER-START */", "/* LEADERBOARD-RENDER-END */"),
     ])
     node_src = (
         "const MOCKS = " + json.dumps(MOCKS_JS) + ";\n"
@@ -271,6 +280,11 @@ def test_slider_state_machine():
         assert res["rejections"] == [], f"{name}: unhandled rejections: {res['rejections']}"
         states = res["states"]
         assert not any(s.get("error") for s in states), f"{name}: {states}"
+        # The real renderLeaderboard must run on every load: it threw
+        # ReferenceError ('groups is not defined') on the live site
+        # because the harness used to stub it out.
+        init_state = _by_tag(states)["init"]
+        assert "Fastest warming" in init_state["lb"], f"{name}: leaderboard did not render: {init_state['lb']!r}"
         for s in states:
             # The heading must never be stuck claiming a recompute once
             # the map has settled, and must never show a window the
@@ -322,3 +336,6 @@ def test_slider_state_machine():
     assert tp["after 2016 settle"]["heading"] == "Global trend map"
     assert tp["after 2016 settle"]["mapYears"] == [1880, 2026]
     assert "could not be computed" in tp["after 2016 settle"]["note"]
+    # The restore refetches the previous window, so the cell panel must
+    # follow it too — not keep quoting the broken window's slope.
+    assert tp["after 2016 settle"]["panel"] == "1880\u20132026"

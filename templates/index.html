@@ -217,36 +217,37 @@
           </div>
         </section>
 
-        <!-- ============ Is it speeding up? (decade-by-decade trends) ============ -->
-        <section id="decades-section" class="card" aria-label="Is it speeding up?">
-          <div class="card-head">
-            <h2>Is it speeding up?</h2>
-            <p class="card-sub">The same trend test, run decade by decade.
-            The table and chart below are the whole planet; inspect a cell
-            on the map and its own decades appear underneath.</p>
-          </div>
-          <p id="changepoint-callout" class="callout">Checking whether the trend changed pace&hellip;</p>
-          <div class="chart-box"><canvas id="decades-chart"></canvas></div>
-          <p class="note" id="decades-note" hidden></p>
-          <div class="table-wrap">
-            <table class="decades-table" id="decades-table">
-              <thead><tr><th>Decade</th><th>Slope / dec</th><th>p</th><th>Sig.</th><th>n</th></tr></thead>
-              <tbody id="decades-tbody"></tbody>
-            </table>
-          </div>
-          <div id="decades-cell-block" hidden>
-            <h3 id="decades-cell-note"></h3>
-            <div class="table-wrap">
-              <table class="decades-table" id="decades-cell-table">
-                <thead><tr><th>Decade</th><th>Slope / dec</th><th>p</th><th>Sig.</th><th>n</th></tr></thead>
-                <tbody id="decades-cell-tbody"></tbody>
-              </table>
-            </div>
-            <p class="note" id="decades-cell-error" hidden></p>
-          </div>
-        </section>
       </aside>
     </div>
+
+  <!-- ============ Is it speeding up? (decade-by-decade trends) ============ -->
+  <section id="decades-section" class="card" aria-label="Is it speeding up?">
+    <div class="card-head">
+      <h2>Is it speeding up?</h2>
+      <p class="card-sub">The same trend test, run decade by decade.
+      The table and chart below are the whole planet; inspect a cell
+      on the map and its own decades appear underneath.</p>
+    </div>
+    <p id="changepoint-callout" class="callout">Checking whether the trend changed pace&hellip;</p>
+    <div class="chart-box"><canvas id="decades-chart"></canvas></div>
+    <p class="note" id="decades-note" hidden></p>
+    <div class="table-wrap">
+      <table class="decades-table" id="decades-table">
+        <thead><tr><th>Decade</th><th>Slope / dec</th><th>p</th><th>Sig.</th><th>n</th></tr></thead>
+        <tbody id="decades-tbody"></tbody>
+      </table>
+    </div>
+    <div id="decades-cell-block" hidden>
+      <h3 id="decades-cell-note"></h3>
+      <div class="table-wrap">
+        <table class="decades-table" id="decades-cell-table">
+          <thead><tr><th>Decade</th><th>Slope / dec</th><th>p</th><th>Sig.</th><th>n</th></tr></thead>
+          <tbody id="decades-cell-tbody"></tbody>
+        </table>
+      </div>
+      <p class="note" id="decades-cell-error" hidden></p>
+    </div>
+  </section>
   </section>
 
   <!-- ============ Leaderboard: fastest-changing cells ============ -->
@@ -456,9 +457,10 @@
           gridded &mdash; 2&deg; temperature anomaly maps, 1880&ndash;2026.</li>
           <li><a href="https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc">GPCP v2.3</a>
           &mdash; 2.5&deg; precipitation maps, 1979&ndash;2026.</li>
-          <li>Country labels and borders on the map &mdash; Esri World Light
-          Gray Reference tiles, drawn above the trend colours so the
-          geography stays readable at every zoom.</li>
+          <li>Country labels and borders on the map &mdash; Esri World Street
+          Map tiles with the World Boundaries and Places overlay, drawn
+          above the trend colours so the geography stays readable at
+          every zoom.</li>
         </ul>
         <p>Each map cell gets a <strong>Mann-Kendall test</strong> with
         <strong>Sen&rsquo;s slope</strong> (the median of all pairwise slopes, so one
@@ -516,7 +518,7 @@
     false-discovery control at 5%. &ldquo;Significant&rdquo; means p &lt; 0.05 for a
     point series and q &le; 0.05 for a map cell. No data is invented &mdash; the
     app serves the cached downloads in <code>data/</code>. Basemap &copy;
-    OpenStreetMap contributors.</p>
+    Esri, HERE, Garmin, FAO, NOAA, USGS.</p>
     <p>AI disclosure: this starter was built with AI assistance (Muse).
     Team Overthinkers &middot; NASA Space Apps Challenge 2026.</p>
   </footer>
@@ -525,7 +527,7 @@
 <script>
 /* Trend Detective front-end.
    Data comes only from /api/series, /api/summary, /api/map, /api/cell.
-   The map is Leaflet over OpenStreetMap tiles; the trend grid is
+   The map is Leaflet over Esri World Street Map tiles; the trend grid is
    painted onto #map-canvas and shown as a Leaflet imageOverlay, so it
    stays aligned while panning and zooming. */
 const $ = (id) => document.getElementById(id);
@@ -538,6 +540,7 @@ if (CHART_OK) {
   Chart.defaults.borderColor = 'rgba(22,25,29,0.10)';
 }
 
+/* FMT-START */
 function fmtSigned(x, d) {
   if (x === null || x === undefined || Number.isNaN(x)) return 'n/a';
   return (x >= 0 ? '+' : '') + x.toFixed(d === undefined ? 3 : d);
@@ -574,6 +577,7 @@ function fmtLatLon(lat, lon) {
   return la + ', ' + lo;
 }
 function normLon(lon) { return ((lon + 180) % 360 + 360) % 360 - 180; }
+/* FMT-END */
 
 /* ---------- Mann-Kendall + Sen's slope, in the browser ----------
    Mirrors stats/mannkendall.py exactly (Hamed-Rao lag-3 correction,
@@ -1918,6 +1922,7 @@ function pickLeaderboardGroups(cells, isTemp) {
 /* LEADERBOARD-PURE-END */
 
 /* ---------- Leaderboard (computed in the browser from mapData) ---------- */
+/* LEADERBOARD-RENDER-START */
 function renderLeaderboard() {
   const tbody = $('leaderboard-tbody');
   const note = $('leaderboard-note');
@@ -1943,7 +1948,8 @@ function renderLeaderboard() {
     : 'Leaderboard: the wettest and driest trends';
   let html = '';
   const counts = {};
-  pickLeaderboardGroups(cells, isTemp).forEach((g) => {
+  const picked = pickLeaderboardGroups(cells, isTemp);
+  picked.forEach((g) => {
     counts[g.key] = g.cells.length;
     html += '<tr class="lb-group"><td colspan="5">' + g.label + '</td></tr>';
     g.cells.forEach((c, idx) => {
@@ -1964,7 +1970,7 @@ function renderLeaderboard() {
     note.textContent = 'No significant cells for this map \u2014 nothing qualifies for the leaderboard yet.';
     return;
   }
-  const short = groups
+  const short = picked
     .filter((g) => counts[g.key] < 10)
     .map((g) => g.label + ': only ' + counts[g.key] + ' cell' + (counts[g.key] === 1 ? '' : 's') + ' qualify');
   if (short.length) {
@@ -1975,6 +1981,7 @@ function renderLeaderboard() {
     note.textContent = '';
   }
 }
+/* LEADERBOARD-RENDER-END */
 
 /* ---------- Year slider: on-demand map window ----------
    Start year slider, 1880–2016, step 1; the end is fixed at the latest
@@ -1996,7 +2003,8 @@ function updateYearWindowLabel() {
   if (!label) return;
   const start = yearSlider ? parseInt(yearSlider.value, 10) : (mapData ? mapData.years[0] : 1880);
   const end = mapWindow.end || (mapData ? mapData.years[1] : null);
-  label.textContent = start + '\u2013' + (end === null || end === undefined ? '\u2026' : end);
+  label.textContent = start + '\u2013' + (end === null || end === undefined ? '\u2026' : end) +
+    (windowPending ? ' \u00B7 loading\u2026' : '');
 }
 /* Re-measure the inspected cell for the new window. A failure must not
    break the heading state (already settled by the caller) and must never
@@ -2033,6 +2041,10 @@ async function applyYearWindow(startYear) {
   }
   const seq = ++windowSeq;
   const prev = { start: mapWindow.start, end: mapWindow.end };
+  /* The window that was actually loaded before this attempt — the
+     restore target. `prev` is only the previously REQUESTED window,
+     which can be an intermediate slider value that never loaded. */
+  const loadedBefore = mapData ? { start: mapData.years[0], end: mapData.years[1] } : null;
   /* 1880 is the full period: no start_year parameter, so the fast
      precomputed map is served instead of a ~15 s on-demand window
      that would compute the same data. */
@@ -2077,25 +2089,47 @@ async function applyYearWindow(startYear) {
     await refetchCellQuietly();
     return;
   }
-  /* Failed: restore EVERYTHING to the previous window — slider
-     position, mapWindow, and the map/leaderboard/stats themselves
-     (mapData was never overwritten by the failed load, so the
-     refetch below is only to repaint the previous window). */
-  mapWindow = prev;
-  yearSlider.value = prev.start === null ? 1880 : prev.start;
-  updateYearWindowLabel();
-  updateSeasonLabel();
-  try {
-    await loadMap();
-  } catch (e) {
-    /* The flag is already false and the heading already describes the
-       restored window; a failed restore repaint leaves the previous
-       map up and the note below still explains what happened. */
+  /* Failed: restore EVERYTHING to the window that was loaded before
+     this attempt. Two cases:
+     - Fetch failure: mapData was never overwritten, so the map,
+       leaderboard and stats already show the loaded window — the
+       restore only resets the slider, the labels, and the cell panel.
+     - Paint/leaderboard failure after the new payload was assigned:
+       mapData now holds the broken window, so the previous window
+       must be refetched (the old restore path) before the labels
+       and the cell panel are synced.
+     Restoring to `prev` (the previously REQUESTED window)
+     unconditionally was wrong: prev can be an intermediate slider
+     value that never loaded, which once left the heading claiming
+     1954–2026 while everything else showed the full record. */
+  const overwritten = !!loadedBefore && !!mapData && mapData.years[0] !== loadedBefore.start;
+  const restoreStart = overwritten
+    ? (prev.start === null ? 1880 : prev.start)
+    : (loadedBefore ? loadedBefore.start : (prev.start === null ? 1880 : prev.start));
+  const restoreEnd = overwritten ? prev.end : (loadedBefore ? loadedBefore.end : prev.end);
+  if (overwritten) {
+    mapWindow = prev;
+    yearSlider.value = restoreStart;
+    updateYearWindowLabel();
+    updateSeasonLabel();
+    try {
+      await loadMap();
+    } catch (e) {
+      /* The flag is already false and the heading already describes the
+         restored window; a failed restore repaint leaves the previous
+         map up and the note below still explains what happened. */
+    }
+  } else {
+    mapWindow = { start: restoreStart === 1880 ? null : restoreStart, end: restoreEnd };
+    yearSlider.value = restoreStart;
+    updateYearWindowLabel();
+    updateSeasonLabel();
   }
+  await refetchCellQuietly();
   if (seq !== windowSeq) return;
   yearWindowNote.hidden = false;
   yearWindowNote.textContent = 'That window could not be computed \u2014 restored the previous window (' +
-    (prev.start ? prev.start + '\u2013' + (prev.end || '') : 'full period') + ').';
+    (restoreStart === 1880 ? 'full period' : restoreStart + '\u2013' + (restoreEnd || '')) + ').';
 }
 if (yearSlider) {
   yearSlider.addEventListener('input', () => {
@@ -2105,7 +2139,15 @@ if (yearSlider) {
       const start = parseInt(yearSlider.value, 10);
       /* 1880 is the full period (mapWindow.start null), not a window. */
       const effective = start === 1880 ? null : start;
-      if (Number.isFinite(start) && effective !== mapWindow.start) applyYearWindow(start);
+      if (!Number.isFinite(start)) return;
+      if (effective === mapWindow.start) {
+        /* Already on this window: the state is consistent, so a failure
+           note left over from an earlier attempt must not stick. */
+        yearWindowNote.hidden = true;
+        yearWindowNote.textContent = '';
+        return;
+      }
+      applyYearWindow(start);
     }, 600);
   });
 }
