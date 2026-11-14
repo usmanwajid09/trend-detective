@@ -889,10 +889,15 @@ function paintOverlay() {
     const y = Math.round(top / 180 * mapCanvas.height);
     for (let j = 0; j < nLon; j++) {
       const s = mapData.slope_per_decade[i][j];
-      if (s === null || s === undefined) continue;
       const left = normLon(mapData.lon[j]) - lonStep / 2;
       const x = Math.round((left + 180) / 360 * mapCanvas.width);
-      mapCtx.fillStyle = mapData.significant[i][j] ? slopeColor(s, maxAbs) : '#8a97a5';
+      if (s === null || s === undefined || Number.isNaN(s)) {
+        /* No data: paint blank white, exactly as the legend promises, so
+           untested ocean never reads as cooling or as not-significant grey. */
+        mapCtx.fillStyle = '#ffffff';
+      } else {
+        mapCtx.fillStyle = mapData.significant[i][j] ? slopeColor(s, maxAbs) : '#8a97a5';
+      }
       mapCtx.fillRect(x, y, CELL_PX + 0.5, CELL_PX + 0.5);
     }
   }
@@ -1171,6 +1176,13 @@ async function selectPrimary(lat, lon) {
 }
 async function selectCompare(lat, lon) {
   const d = await fetchCell(lat, lon);
+  if (!d.trend || d.n < 3) {
+    /* That cell has no data: do not pin an empty comparison — stay armed
+       and tell the user to pick a coloured cell instead. */
+    $('compare-hint').textContent = 'That cell has no data \u2014 click a coloured cell to compare.';
+    $('compare-hint').hidden = false;
+    return;
+  }
   compareCell = { lat: d.cell_lat, lon: d.cell_lon, payload: d };
   compareArmed = false;
   $('compare-hint').hidden = true;
@@ -1241,6 +1253,7 @@ $('empty-fastest').addEventListener('click', () => presetFastest('temperature', 
 $('compare-pin').addEventListener('click', () => {
   if (!primaryCell) return;
   compareArmed = true;
+  $('compare-hint').textContent = 'Now click another cell on the map.';
   $('compare-hint').hidden = false;
   $('compare-pin').textContent = 'Comparing\u2026 click another cell on the map';
 });

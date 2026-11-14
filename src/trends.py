@@ -52,6 +52,21 @@ def analyse_trend(years, values):
     }
 
 
+_SUPERSCRIPTS = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
+
+
+def fmt_p(p):
+    """Render a p-value the way the page does: never a bare 0 or 4.2e-11."""
+    if p is None:
+        return "p-value unavailable"
+    if p <= 0:
+        return "p < 0.001"
+    if p < 0.001:
+        mantissa, _, exp = f"{p:.1e}".partition("e")
+        return f"p ≈ {mantissa}×10{str(int(exp)).translate(_SUPERSCRIPTS)}"
+    return f"p = {p:.3g}"
+
+
 def verdict(trend, unit, label):
     """Plain-language verdict from a trend dict (never hides the numbers)."""
     slope = trend["slope_per_decade"]
@@ -64,9 +79,9 @@ def verdict(trend, unit, label):
     if trend["significant"]:
         return (
             f"Significant {direction}: {slope:+.3f} {unit} per decade "
-            f"(p = {p:.3g}, n = {trend['n']})"
+            f"({fmt_p(p)}, n = {trend['n']})"
         )
     return (
         f"No significant trend detected: {slope:+.3f} {unit} per decade "
-        f"(p = {p:.3g}, n = {trend['n']})"
+        f"({fmt_p(p)}, n = {trend['n']})"
     )

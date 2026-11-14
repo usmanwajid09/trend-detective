@@ -35,6 +35,18 @@ def test_verdict_words_match_numbers():
     assert "Significant wetter" in verdict(wet, "mm/day", "precipitation")
 
 
+def test_verdict_p_value_never_bare_zero_or_raw_exponent():
+    # p underflows to exactly 0 for the full-record Lahore cell: never "p = 0".
+    underflow = {"slope_per_decade": 0.122, "p_value": 0.0, "significant": True, "n": 147}
+    assert "p < 0.001" in verdict(underflow, "°C", "temperature")
+    assert "p = 0," not in verdict(underflow, "°C", "temperature")
+    tiny = {"slope_per_decade": 0.246, "p_value": 5.68e-05, "significant": True, "n": 44}
+    assert "5.7×10⁻⁵" in verdict(tiny, "°C", "temperature")
+    assert "e-05" not in verdict(tiny, "°C", "temperature")
+    ordinary = {"slope_per_decade": -0.06, "p_value": 0.53, "significant": False, "n": 44}
+    assert "p = 0.53" in verdict(ordinary, "°C", "temperature")
+
+
 def test_too_few_points_raises():
     with pytest.raises(ValueError):
         analyse_trend([2000, 2001], [1.0, 2.0])
