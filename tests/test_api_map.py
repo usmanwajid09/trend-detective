@@ -69,6 +69,25 @@ def test_cell_lahore_temperature(client):
     assert d["trend"]["ci_lo_per_decade"] > 0  # whole CI above zero
     assert "Significant warming" in d["verdict"]
     assert d["source"] == "NASA GISTEMP v4 gridded"
+    assert d["records"] == {"max": {"year": 2022, "value": 1.4392},
+                            "min": {"year": 1893, "value": -2.0417}}
+
+
+def test_map_window_start_year_only(client):
+    # The year slider's on-demand window: start_year alone keeps the
+    # default end, and the payload's years/signature reflect the window.
+    resp = client.get("/api/map?variable=temperature&start_year=1981")
+    assert resp.status_code == 200
+    d = resp.get_json()
+    assert d["years"] == [1981, 2026]
+    assert d["season"] == "annual"
+    assert len(d["lat"]) == 90 and len(d["lon"]) == 180
+    # The window changes the answer vs the full 1880-2026 map (6170).
+    assert int(np.array(d["significant"]).sum()) == 5849
+    resp = client.get("/api/map?variable=precipitation&start_year=1981")
+    d = resp.get_json()
+    assert d["years"] == [1981, 2026]
+    assert int(np.array(d["significant"]).sum()) == 2899
 
 
 def test_cell_lahore_precipitation(client):
@@ -79,6 +98,9 @@ def test_cell_lahore_precipitation(client):
     assert d["trend"]["significant_bh"] is True
     assert d["trend"]["slope_per_decade"] == pytest.approx(0.085, abs=0.01)
     assert "Significant wetter" in d["verdict"]
+    assert set(d["records"]) == {"max", "min"}
+    assert isinstance(d["records"]["max"]["year"], int)
+    assert isinstance(d["records"]["min"]["year"], int)
 
 
 def test_cell_reykjavik_warming_matches_point_series(client):

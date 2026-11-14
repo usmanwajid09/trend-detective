@@ -50,6 +50,7 @@
   </section>
 
   <section class="findings" aria-label="Key findings">
+    <div class="findings-loading" id="findings-loading"><span class="spinner" aria-hidden="true"></span><span>Warming up the data&hellip;</span></div>
     <div class="fact">
       <div class="fact-num"><span data-count="0.212" data-decimals="3" data-prefix="+">+0.212</span> <span class="fact-unit">&deg;C / decade</span></div>
       <div class="fact-label">Global warming, 1981&ndash;2025</div>
@@ -98,6 +99,13 @@
           <option value="SON">Autumn (SON)</option>
         </select>
       </label>
+      <label class="toolbar-label">Map window &mdash; start year
+        <span class="slider-row">
+          <input type="range" id="year-start-slider" min="1880" max="2020" step="1" value="1880" aria-label="Start year of the map window">
+          <output id="year-window-label" for="year-start-slider">1880&ndash;&hellip;</output>
+        </span>
+      </label>
+      <p class="note" id="year-window-note" role="status" hidden></p>
       <div class="presets" role="group" aria-label="Guided stories">
         <span class="presets-label">Guided stories:</span>
         <button type="button" class="preset" id="preset-warming">Fastest warming</button>
@@ -126,6 +134,7 @@
           <div class="map-tooltip" id="map-tooltip" hidden></div>
           <div class="loading-overlay" id="map-loading"><span class="spinner" aria-hidden="true"></span><span id="map-loading-text">Fetching trend map&hellip;</span></div>
         </div>
+        <p class="map-hint" id="map-scroll-hint">Click the map to zoom with scroll &mdash; the +/&minus; buttons always work.</p>
         <div class="legend" aria-label="Map legend">
           <span class="legend-title">Trend per decade, significant cells only (q &le; 0.05)</span>
           <span class="legend-item" id="map-season-label">Annual</span>
@@ -181,6 +190,11 @@
             <div class="chart-box"><canvas id="cell-chart"></canvas></div>
             <p id="cell-verdict" class="verdict"></p>
             <p id="cell-meta" class="note"></p>
+            <p id="cell-records" class="note" hidden></p>
+            <div class="report-row">
+              <button type="button" class="btn" id="download-report-cell">Download findings (.txt)</button>
+              <span class="note" id="cell-report-note" role="status"></span>
+            </div>
             <p id="lahore-note" class="callout" hidden><strong>The honest complication:</strong>
             the POWER point series for Lahore says no significant warming
             (&minus;0.061 &deg;C/decade, 1981&ndash;2024, p = 0.53), while this GISTEMP cell says it
@@ -250,6 +264,37 @@
         <thead><tr><th>Rank</th><th>Cell</th><th>Slope / decade</th><th>p-value</th><th>q-value</th></tr></thead>
         <tbody id="leaderboard-tbody"></tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ============ Hotspots: where warming meets water ============ -->
+  <section id="hotspots-section" class="card" aria-label="Hotspots: where warming meets water">
+    <div class="card-head">
+      <h2>Hotspots: where warming meets water</h2>
+      <p class="card-sub">The places warming fastest <em>and</em> getting drier
+      (drought risk) or wetter (flood risk) &mdash; the top 10 of each, significant
+      cells only. Click a row to fly to that cell.</p>
+    </div>
+    <p class="note" id="hotspots-note" hidden></p>
+    <div class="hotspots-grid">
+      <div>
+        <h3>Drought risk</h3>
+        <div class="table-wrap">
+          <table class="hotspots-table" id="hotspots-drought-table">
+            <thead><tr><th>Place</th><th>Temp / decade</th><th>Precip / decade</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
+            <tbody id="hotspots-drought-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Flood risk</h3>
+        <div class="table-wrap">
+          <table class="hotspots-table" id="hotspots-flood-table">
+            <thead><tr><th>Place</th><th>Temp / decade</th><th>Precip / decade</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
+            <tbody id="hotspots-flood-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -327,6 +372,7 @@
     <div class="details">
       <p id="meta"></p>
       <p id="note" class="note"></p>
+      <p id="series-records" class="note" hidden></p>
     </div>
   </section>
 
@@ -345,6 +391,10 @@
         <th>Change / decade</th><th>Significant?</th><th>Verdict</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+    <div class="report-row">
+      <button type="button" class="btn" id="download-report-global">Download global findings (.txt)</button>
+      <span class="note" id="summary-report-note" role="status"></span>
     </div>
   </section>
 
@@ -712,8 +762,12 @@ function baseChartOptions(yLabel, legendPosition) {
     plugins: { legend: { display: true, position: legendPosition || 'top',
       labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 6, usePointStyle: true } } },
     scales: {
-      x: { title: { display: true, text: 'Year' } },
-      y: { title: { display: true, text: yLabel } }
+      x: { title: { display: true, text: 'Year' },
+           grid: { color: 'rgba(22,25,29,0.06)' },
+           ticks: { font: { size: 11 } } },
+      y: { title: { display: true, text: yLabel },
+           grid: { color: 'rgba(22,25,29,0.06)' },
+           ticks: { font: { size: 11 } } }
     }
   };
 }
@@ -743,6 +797,36 @@ function trendLineDatasets(d, colour, tag) {
   ];
 }
 
+/* ---------- First-load state: the key-findings numbers are baked into
+   the HTML, so cover them with an honest "Warming up the data…" notice
+   until the first live fetch resolves, instead of showing numbers that
+   have not been checked against the server yet. ---------- */
+let findingsLoadingHidden = false;
+function hideFindingsLoading() {
+  if (findingsLoadingHidden) return;
+  findingsLoadingHidden = true;
+  const el = $('findings-loading');
+  if (el) el.style.display = 'none';
+}
+
+/* Render the record years from a payload's "records" field, if present.
+   Nothing is shown when records are absent — no invented fallback. */
+function recordsText(records, variable, unit) {
+  if (!records || !records.max || !records.min) return '';
+  const val = (r) => fmtSigned(r.value, 2) + ' ' + unit;
+  if (variable === 'precipitation') {
+    return 'Wettest year: ' + records.max.year + ' (' + val(records.max) +
+      ') \u00B7 Driest year: ' + records.min.year + ' (' + val(records.min) + ').';
+  }
+  return 'Hottest year: ' + records.max.year + ' (' + val(records.max) +
+    ') \u00B7 Coldest year: ' + records.min.year + ' (' + val(records.min) + ').';
+}
+function showRecords(el, records, variable, unit) {
+  const text = recordsText(records, variable, unit);
+  el.textContent = text;
+  el.hidden = !text;
+}
+
 /* ---------- Explore a place (point series) ---------- */
 const seriesState = { chart: null };
 const regionSel = $('region');
@@ -764,6 +848,7 @@ function loadSeriesInto(d) {
     fmtP(d.trend.p_value) +
     ' \u00B7 r = ' + d.trend.r.toFixed(2) + ' \u00B7 Source: ' + d.source;
   $('note').textContent = d.note;
+  showRecords($('series-records'), d.records, variableSel.value, d.unit);
 }
 async function loadSeries() {
   if (!CHART_OK) {
@@ -779,6 +864,7 @@ async function loadSeries() {
     if (d.error) {
       $('verdict').textContent = 'Error: ' + d.error;
       $('verdict').className = 'verdict';
+      hideFindingsLoading();
       return;
     }
     if (seriesState.chart) seriesState.chart.destroy();
@@ -808,6 +894,7 @@ async function loadSeries() {
       options: baseChartOptions(d.variable + ' (' + d.unit + ')'),
     });
     loadSeriesInto(d);
+    hideFindingsLoading();
   } finally {
     setSeriesLoading(false);
   }
@@ -905,6 +992,7 @@ async function loadSummary() {
       }
     });
   });
+  hideFindingsLoading();
 }
 
 function syncVariables() {
@@ -941,11 +1029,16 @@ function seasonSuffix() {
   const s = currentSeason();
   return s === 'annual' ? '' : ' \u00B7 ' + (SEASON_LABELS[s] || s);
 }
+function windowSuffix() {
+  if (!mapWindow.start) return '';
+  const end = mapWindow.end || (mapData ? mapData.years[1] : null);
+  return ' \u00B7 ' + mapWindow.start + '\u2013' + (end === null || end === undefined ? '\u2026' : end);
+}
 function updateSeasonLabel() {
   const el = $('map-season-label');
   if (el) el.textContent = SEASON_LABELS[currentSeason()] || 'Annual';
   const h = $('map-heading');
-  if (h) h.textContent = 'Global trend map' + seasonSuffix();
+  if (h) h.textContent = 'Global trend map' + seasonSuffix() + windowSuffix();
 }
 function unitFor(variable) { return variable === 'precipitation' ? 'mm/day' : '\u00B0C'; }
 const mapTooltip = $('map-tooltip');
@@ -1074,6 +1167,10 @@ function initLeaflet() {
     maxBounds: [[-90, -180], [90, 180]],
     maxBoundsViscosity: 1.0,
     zoomControl: true,
+    /* Scroll-wheel zoom is OFF until the user clicks into the map once:
+       otherwise scrolling the page with the cursor over the map zooms the
+       map instead of the page. The +/- buttons always work. */
+    scrollWheelZoom: false,
   }).setView([28, 10], 2);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -1128,29 +1225,42 @@ function onMapMouseMove(e) {
   mapTooltip.style.top = top + 'px';
 }
 
-async function loadMap() {
+/* Active on-demand map window, set by the year slider. Null start means
+   the precomputed full-period map. The end is always the latest year in
+   the map data (mapData.years[1]). */
+let mapWindow = { start: null, end: null };
+
+async function loadMap(loadingText) {
   const variable = mapVarSel.value;
   const season = currentSeason();
   updateSeasonLabel();
-  setMapLoading(true, 'Fetching trend map \u2014 ' + (variable === 'temperature' ? 'GISTEMP v4, 1880\u20132026' : 'GPCP v2.3, 1979\u20132026') + seasonSuffix() + '\u2026');
+  setMapLoading(true, loadingText || ('Fetching trend map \u2014 ' + (variable === 'temperature' ? 'GISTEMP v4, 1880\u20132026' : 'GPCP v2.3, 1979\u20132026') + seasonSuffix() + '\u2026'));
   $('map-stats').textContent = 'Loading map\u2026';
   try {
-    const res = await fetch('/api/map?variable=' + variable + '&season=' + season);
+    let url = '/api/map?variable=' + variable + '&season=' + season;
+    if (mapWindow.start) {
+      url += '&start_year=' + mapWindow.start +
+        (mapWindow.end ? '&end_year=' + mapWindow.end : '');
+    }
+    const res = await fetch(url);
     const d = await res.json().catch(() => ({}));
     if (!res.ok || d.error) {
       /* Seasonal map missing (503) or any other map error: say so in
          #map-stats and leave the previous map up — do not overwrite
          mapData with the error payload. */
       $('map-stats').textContent = 'Error: ' + (d.error || ('HTTP ' + res.status)) +
-        seasonSuffix() + ' \u2014 showing the previous map.';
-      return;
+        seasonSuffix() + windowSuffix() + ' \u2014 showing the previous map.';
+      return false;
     }
     mapData = d;
-    const url = paintOverlay();
-    if (leafletMap && url) {
-      if (overlay) overlay.setUrl(url);
+    if (mapWindow.start && !mapWindow.end) mapWindow.end = d.years[1];
+    updateYearWindowLabel();
+    updateSeasonLabel();
+    const overlayUrl = paintOverlay();
+    if (leafletMap && overlayUrl) {
+      if (overlay) overlay.setUrl(overlayUrl);
       else {
-        overlay = L.imageOverlay(url, [[-90, -180], [90, 180]], { opacity: 0.88, interactive: false });
+        overlay = L.imageOverlay(overlayUrl, [[-90, -180], [90, 180]], { opacity: 0.88, interactive: false });
         overlay.addTo(leafletMap);
       }
       if (primaryMarker) primaryMarker.addTo(leafletMap);
@@ -1160,6 +1270,7 @@ async function loadMap() {
       if (bordersLayer) bordersLayer.bringToFront();
     }
     renderLeaderboard();
+    return true;
   } finally {
     setMapLoading(false);
   }
@@ -1266,6 +1377,7 @@ function showCell(d) {
       fmtP(d.trend.p_value) +
       (d.trend.q_value !== null && d.trend.q_value !== undefined
         ? ' \u00B7 ' + fmtQ(d.trend.q_value) : '') : '');
+  showRecords($('cell-records'), d.records, mapVarSel.value, d.unit);
   if (d.trend) {
     $('cell-chip-slope-label').textContent =
       'Sen\u2019s slope \u00B7 ' + d.years[0] + '\u2013' + d.years[d.years.length - 1];
@@ -1341,10 +1453,19 @@ async function selectCompare(lat, lon) {
   placeMarkers();
 }
 function onMapClick(e) {
+  enableScrollZoom();
   if (!mapData) return;
   const c = nearestCell(e.latlng.lat, e.latlng.lng);
   if (compareArmed) selectCompare(c.lat, c.lon);
   else selectPrimary(c.lat, c.lon);
+}
+let scrollZoomEnabled = false;
+function enableScrollZoom() {
+  if (scrollZoomEnabled || !leafletMap) return;
+  scrollZoomEnabled = true;
+  leafletMap.scrollWheelZoom.enable();
+  const hint = $('map-scroll-hint');
+  if (hint) hint.textContent = 'Scroll zoom on \u2014 scroll to zoom, drag to pan, +/\u2212 buttons always work.';
 }
 function flyToCell(lat, lon, zoom) {
   if (leafletMap) leafletMap.flyTo([lat, lon], zoom || 5, { duration: 0.9 });
@@ -1434,7 +1555,16 @@ mapVarSel.addEventListener('change', async () => {
 seasonSel.addEventListener('change', async () => {
   /* Season change mirrors the variable change: it ends any comparison
      (the pinned cell was measured under the old season) and re-fetches
-     the inspected cell, if any, under the new season. */
+     the inspected cell, if any, under the new season. A seasonal map is
+     precomputed for the full period, so it also clears any on-demand
+     year window (windows are annual only). */
+  if (currentSeason() !== 'annual' && mapWindow.start) {
+    mapWindow = { start: null, end: null };
+    if (yearSlider) yearSlider.value = String(yearSlider.min);
+    updateYearWindowLabel();
+    yearWindowNote.hidden = false;
+    yearWindowNote.textContent = 'Seasonal maps cover the full period \u2014 the custom year window was cleared.';
+  }
   compareCell = null; compareArmed = false;
   $('compare-clear').hidden = true; $('compare-hint').hidden = true;
   $('compare-pin').textContent = 'Pin a second cell to compare';
@@ -1695,6 +1825,131 @@ function renderLeaderboard() {
   }
 }
 
+/* ---------- Year slider: on-demand map window ----------
+   Start year slider, 1880–2020, step 1; the end is fixed at the latest
+   year in the map data. Changes are debounced ~600 ms — each new window
+   costs ~15 s of server compute, so the control must never fire a fetch
+   per slider tick. A failed window restores the previous one. */
+const yearSlider = $('year-start-slider');
+const yearWindowNote = $('year-window-note');
+let yearSliderTimer = null;
+function updateYearWindowLabel() {
+  const label = $('year-window-label');
+  if (!label) return;
+  const start = yearSlider ? parseInt(yearSlider.value, 10) : (mapData ? mapData.years[0] : 1880);
+  const end = mapWindow.end || (mapData ? mapData.years[1] : null);
+  label.textContent = start + '\u2013' + (end === null || end === undefined ? '\u2026' : end);
+}
+async function applyYearWindow(startYear) {
+  const prev = { start: mapWindow.start, end: mapWindow.end };
+  mapWindow = { start: startYear, end: mapData ? mapData.years[1] : null };
+  updateYearWindowLabel();
+  /* On-demand windows are annual only — a seasonal map is precomputed
+     for the full period, so switch back to annual rather than silently
+     mixing the two. */
+  if (currentSeason() !== 'annual') {
+    seasonSel.value = 'annual';
+    updateSeasonLabel();
+  }
+  const ok = await loadMap('Recomputing map\u2026 this window takes about 15 seconds.');
+  if (ok) {
+    yearWindowNote.hidden = true;
+    yearWindowNote.textContent = '';
+  } else {
+    mapWindow = prev;
+    updateYearWindowLabel();
+    await loadMap();
+    yearWindowNote.hidden = false;
+    yearWindowNote.textContent = 'That window could not be computed \u2014 restored the previous window (' +
+      (prev.start ? prev.start + '\u2013' + (prev.end || '') : 'full period') + ').';
+  }
+}
+if (yearSlider) {
+  yearSlider.addEventListener('input', () => {
+    updateYearWindowLabel();
+    clearTimeout(yearSliderTimer);
+    yearSliderTimer = setTimeout(() => {
+      const start = parseInt(yearSlider.value, 10);
+      if (Number.isFinite(start) && start !== mapWindow.start) applyYearWindow(start);
+    }, 600);
+  });
+}
+
+/* ---------- Hotspots: where warming meets water ----------
+   Served by /api/hotspots (backend lands separately). A failed fetch
+   shows a short note in the section and never breaks the page. */
+function renderHotspotTable(tbodyId, rows) {
+  const tbody = $(tbodyId);
+  if (!rows || !rows.length) { tbody.innerHTML = ''; return; }
+  tbody.innerHTML = rows.map((r) =>
+    '<tr class="row-clickable" data-lat="' + r.lat + '" data-lon="' + r.lon + '" title="Click to fly to this cell">' +
+    '<td>' + fmtLatLon(r.lat, r.lon) + '</td>' +
+    '<td class="num">' + fmtSigned(r.temp_slope_per_decade) + ' \u00B0C/decade</td>' +
+    '<td class="num">' + fmtSigned(r.precip_slope_per_decade) + ' mm/day/decade</td>' +
+    '<td>' + fmtSci(r.temp_p_value) + '</td>' +
+    '<td>' + fmtSci(r.temp_q_value) + '</td>' +
+    '<td>' + fmtSci(r.precip_p_value) + '</td>' +
+    '<td>' + fmtSci(r.precip_q_value) + '</td></tr>'
+  ).join('');
+  tbody.querySelectorAll('tr.row-clickable').forEach((tr) => {
+    tr.addEventListener('click', () =>
+      gotoCell(parseFloat(tr.dataset.lat), parseFloat(tr.dataset.lon), mapVarSel.value));
+  });
+}
+async function loadHotspots() {
+  const note = $('hotspots-note');
+  try {
+    const res = await fetch('/api/hotspots');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    renderHotspotTable('hotspots-drought-tbody', d.drought);
+    renderHotspotTable('hotspots-flood-tbody', d.flood);
+    note.hidden = true;
+    note.textContent = '';
+  } catch (err) {
+    note.hidden = false;
+    note.textContent = 'Hotspots are not available yet (' + err.message +
+      '). The map and leaderboard above still work.';
+  }
+}
+
+/* ---------- Download findings (.txt) ----------
+   Served by /api/report (backend lands separately). No numbers are
+   computed client-side — the server returns the text and filename. */
+async function downloadReport(variable, lat, lon, noteEl) {
+  noteEl.textContent = 'Preparing findings\u2026';
+  try {
+    let url = '/api/report?variable=' + encodeURIComponent(variable);
+    if (lat !== null && lat !== undefined && lon !== null && lon !== undefined) {
+      url += '&lat=' + lat + '&lon=' + lon;
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    const blob = new Blob([d.text], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    const objectUrl = URL.createObjectURL(blob);
+    a.href = objectUrl;
+    a.download = d.filename || 'trend-detective-findings.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    noteEl.textContent = 'Downloaded ' + a.download + '.';
+  } catch (err) {
+    noteEl.textContent = 'Could not download the findings (' + err.message + ').';
+  }
+}
+$('download-report-cell').addEventListener('click', () => {
+  if (!primaryCell) return;
+  downloadReport(mapVarSel.value, primaryCell.lat, primaryCell.lon, $('cell-report-note'));
+});
+$('download-report-global').addEventListener('click', () => {
+  downloadReport(mapVarSel.value, null, null, $('summary-report-note'));
+});
+
 wireZoom($('chart'), () => seriesState.chart);
 wireZoom($('cell-chart'), () => cellState.chart);
 bindZoomButtons('data-series-zoom', () => seriesState.chart);
@@ -1711,6 +1966,7 @@ loadMap();
 loadDecadesGlobal();
 loadChangepoint();
 loadSeaice();
+loadHotspots();
 </script>
 </body>
 </html>

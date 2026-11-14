@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from src.trends import analyse_trend, verdict
+from src.trends import analyse_trend, record_years, verdict
 
 
 def test_exact_slope_recovered():
@@ -45,6 +45,36 @@ def test_verdict_p_value_never_bare_zero_or_raw_exponent():
     assert "e-05" not in verdict(tiny, "°C", "temperature")
     ordinary = {"slope_per_decade": -0.06, "p_value": 0.53, "significant": False, "n": 44}
     assert "p = 0.53" in verdict(ordinary, "°C", "temperature")
+
+
+def test_record_years_basic():
+    r = record_years([2000, 2001, 2002, 2003, 2004], [1.0, 5.0, 3.0, 5.0, 2.0])
+    assert r == {"max": {"year": 2001, "value": 5.0},   # tie: earliest wins
+                "min": {"year": 2000, "value": 1.0}}
+
+
+def test_record_years_skips_nan_gaps():
+    # None and NaN years are missing data, never records.
+    r = record_years([2000, 2001, 2002, 2003, 2004],
+                     [1.0, float("nan"), 3.0, None, 2.0])
+    assert r == {"max": {"year": 2002, "value": 3.0},
+                "min": {"year": 2000, "value": 1.0}}
+
+
+def test_record_years_no_data_is_null():
+    r = record_years([2000, 2001], [float("nan"), None])
+    assert r == {"max": None, "min": None}
+
+
+def test_record_years_real_global_series():
+    """Warmest 2024 (+1.28 °C), coldest 1909 (−0.48 °C) — the README
+    numbers, from the cached GISTEMP global series."""
+    from src.data import load_series
+
+    years, values, _ = load_series("global", "temperature")
+    r = record_years(years, values)
+    assert r["max"] == {"year": 2024, "value": 1.28}
+    assert r["min"] == {"year": 1909, "value": -0.48}
 
 
 def test_too_few_points_raises():

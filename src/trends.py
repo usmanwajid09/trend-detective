@@ -52,6 +52,29 @@ def analyse_trend(years, values):
     }
 
 
+def record_years(years, values):
+    """Warmest/coldest (or wettest/driest) year of a series.
+
+    years, values: array-like of equal length; values may hold None/NaN
+    for missing years, which are skipped.  Returns
+    {"max": {"year": int, "value": float},
+     "min": {"year": int, "value": float}}, or {"max": None, "min": None}
+    when no year has data.  A tie goes to the earliest year.
+    """
+    x = np.asarray(years, dtype=float)
+    y = np.asarray(values, dtype=float)
+    if x.shape != y.shape:
+        raise ValueError("years and values must have equal length")
+    mask = np.isfinite(x) & np.isfinite(y)
+    if not mask.any():
+        return {"max": None, "min": None}
+    xf, yf = x[mask], y[mask]
+    i_max = int(np.argmax(yf))
+    i_min = int(np.argmin(yf))
+    return {"max": {"year": int(xf[i_max]), "value": float(yf[i_max])},
+            "min": {"year": int(xf[i_min]), "value": float(yf[i_min])}}
+
+
 _SUPERSCRIPTS = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 

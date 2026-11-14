@@ -73,7 +73,7 @@ section { margin-top: 1.75rem; }
 .earth-figure img {
   width: 200px; height: 200px; object-fit: cover;
   border-radius: 50%; border: 1px solid var(--line-dark);
-  background: #000; display: block; margin: 0 auto;
+  background: #0b1e3a; display: block; margin: 0 auto;
 }
 .earth-figure figcaption {
   margin-top: 0.55rem; font-size: 0.78rem; color: var(--muted); line-height: 1.4;
@@ -81,9 +81,18 @@ section { margin-top: 1.75rem; }
 
 /* ---------- Key findings strip ---------- */
 .findings {
+  position: relative;
   display: grid; grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   margin-top: 0;
+}
+/* First-load cover: an honest "Warming up the data…" notice over the
+   key findings until the first live fetch resolves (see hideFindingsLoading). */
+.findings-loading {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center; gap: 0.7rem;
+  background: rgba(255, 255, 255, 0.92); color: var(--muted);
+  font-weight: 600; font-size: 0.95rem;
 }
 .fact { padding: 1.1rem 1.25rem; border-left: 1px solid var(--line); }
 .fact:first-child { border-left: none; padding-left: 0.25rem; }
@@ -136,6 +145,12 @@ select:disabled { opacity: 0.5; }
 }
 .chip:hover { color: var(--ink); border-color: var(--accent); }
 .chip.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+.btn, .chip, .preset, .chart-tools button { transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease; }
+.btn:focus-visible, .chip:focus-visible, .preset:focus-visible,
+.chart-tools button:focus-visible, select:focus-visible,
+.text-button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -201,6 +216,20 @@ select:disabled { opacity: 0.5; }
 }
 
 /* ---------- Map ---------- */
+.map-hint {
+  margin: 0.55rem 0 0; font-size: 0.84rem; color: var(--muted);
+}
+.slider-row { display: flex; align-items: center; gap: 0.6rem; }
+.slider-row input[type="range"] {
+  flex: 1 1 140px; min-width: 120px; accent-color: var(--accent);
+  cursor: pointer; padding: 0.4rem 0;
+}
+.slider-row output {
+  font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--ink); font-size: 0.9rem; white-space: nowrap;
+}
+#year-window-note { flex-basis: 100%; margin: 0; min-height: 0; }
+#year-window-note:empty { display: none; }
 .work-grid {
   display: grid; grid-template-columns: 1.65fr 1fr; gap: 1.25rem;
   align-items: start;
@@ -372,27 +401,34 @@ footer {
 footer strong { color: var(--muted); }
 footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 0.35rem; border-radius: 4px; }
 
-/* ---------- Decades / leaderboard (more-trends depth) ---------- */
+/* ---------- Decades / leaderboard / hotspots (more-trends depth) ---------- */
+.hotspots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+#hotspots-section h3 { font-size: 1rem; margin: 0 0 0.55rem; }
+#hotspots-section .table-wrap { margin-top: 0; }
+.report-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-top: 1rem; }
 .inspector #decades-section { margin-top: 1.25rem; }
 #decades-section h3 { font-size: 1rem; margin: 1.1rem 0 0.5rem; }
 #decades-chart { max-height: 260px; }
 #map-season-label { font-weight: 700; color: var(--ink); }
-.decades-table, .leaderboard-table {
+.decades-table, .leaderboard-table, .hotspots-table {
   width: 100%; border-collapse: collapse; background: var(--bg); font-size: 0.9rem;
 }
 .decades-table th, .decades-table td,
-.leaderboard-table th, .leaderboard-table td {
+.leaderboard-table th, .leaderboard-table td,
+.hotspots-table th, .hotspots-table td {
   padding: 0.5rem 0.7rem; text-align: left; border-bottom: 1px solid var(--line);
 }
-.decades-table thead th, .leaderboard-table thead th {
+.decades-table thead th, .leaderboard-table thead th, .hotspots-table thead th {
   background: var(--bg-soft); color: var(--muted);
   font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase;
   white-space: nowrap; border-bottom: 1px solid var(--line-dark);
 }
-.decades-table tbody tr:last-child td, .leaderboard-table tbody tr:last-child td { border-bottom: none; }
-.decades-table td.num, .leaderboard-table td.num {
+.decades-table tbody tr:last-child td, .leaderboard-table tbody tr:last-child td, .hotspots-table tbody tr:last-child td { border-bottom: none; }
+.decades-table td.num, .leaderboard-table td.num, .hotspots-table td.num {
   font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap;
 }
+.hotspots-table tr.row-clickable { cursor: pointer; }
+.hotspots-table tr.row-clickable:hover { background: #eef4fa; }
 .leaderboard-table tr.row-clickable { cursor: pointer; }
 .leaderboard-table tr.row-clickable:hover { background: #eef4fa; }
 .leaderboard-table tr.lb-group td {
@@ -412,6 +448,7 @@ footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 
   .method-item { border-left: none; border-top: 1px solid var(--line); }
   .method-item:first-child { border-top: none; }
   .about-grid { grid-template-columns: 1fr; }
+  .hotspots-grid { grid-template-columns: 1fr; }
   #leaflet-map { height: 440px; }
 }
 @media (max-width: 680px) {
@@ -428,4 +465,21 @@ footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 
   .card { padding: 1.1rem 1rem 1.3rem; }
   .cell-stats { grid-template-columns: 1fr 1fr; }
   #leaflet-map { height: 380px; }
+}
+@media (max-width: 480px) {
+  .fact-num { font-size: 1.55rem; }
+  .fact-num-small { font-size: 1.15rem; }
+  #leaflet-map { height: 320px; }
+  .legend-gradient { width: 110px; }
+  .chart-box { padding: 0.5rem; min-height: 220px; }
+  .chart-box canvas { max-height: 280px; }
+  .map-toolbar { gap: 0.6rem 1rem; }
+  .slider-row input[type="range"] { min-width: 90px; }
+  .hotspots-table, .leaderboard-table, .decades-table { font-size: 0.84rem; }
+  .hotspots-table th, .hotspots-table td,
+  .leaderboard-table th, .leaderboard-table td { padding: 0.45rem 0.5rem; }
+  .cell-stats { grid-template-columns: 1fr 1fr; }
+  .cell-stat dd { font-size: 0.95rem; }
+  .report-row { flex-direction: column; align-items: flex-start; }
+  .mast-right { text-align: left; }
 }

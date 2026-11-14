@@ -22,12 +22,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.changepoint import detect_changepoint  # noqa: E402
 from src.data import REGIONS, VARIABLES, load_series  # noqa: E402
-from src.grid import (DATASETS, SEASONS, cell_series, global_mean_series,  # noqa: E402
-                      load_dataset, load_trend_map, trend_map)
+from src.grid import (DATASETS, SEASONS, cell_series, find_hotspots,  # noqa: E402
+                      global_mean_series, load_dataset, load_trend_map,
+                      trend_map)
 from src.seaice import (SOURCE as SEAICE_SOURCE,  # noqa: E402
                         SOURCE_URL as SEAICE_URL, UNIT as SEAICE_UNIT,
                         load_cache as load_seaice_cache)
-from src.trends import analyse_trend, fmt_p, verdict  # noqa: E402
+from src.trends import (analyse_trend, fmt_p, record_years,  # noqa: E402
+                        verdict)
 from stats.mannkendall import mann_kendall  # noqa: E402
 
 app = Flask(__name__)
@@ -124,6 +126,7 @@ def _series_payload(region_id, variable_id):
     years, values, meta = load_series(region_id, variable_id)
     trend = analyse_trend(years, values)
     label = "precipitation" if variable_id == "precipitation" else "temperature"
+    rounded = [round(v, 3) for v in values]
     return {
         "region": meta["region"],
         "variable": meta["variable"],
@@ -132,7 +135,8 @@ def _series_payload(region_id, variable_id):
         "source_url": meta["url"],
         "note": meta["note"],
         "years": years,
-        "values": [round(v, 3) for v in values],
+        "values": rounded,
+        "records": record_years(years, rounded),
         "trend": trend,
         "verdict": verdict(trend, meta["unit"], label),
     }
@@ -200,6 +204,53 @@ def map_data():
         return jsonify({"error": str(exc)}), 400
 
 
+def _cell_trend(series, label):
+    """Mann-Kendall + Sen's slope for a cell_series dict.
+
+    Returns (trend, verdict_text), or (None, too-few-data text) when
+    fewer than 10 finite years are available.  The BH q-value is not
+    part of this: the caller adds it from the precomputed map
+    (see _map_q).  Shared by /api/cell and /api/report so both quote
+    the same numbers.
+    """
+    years = np.array(series["years"], dtype=float)
+    values = np.array([np.nan if v is None else v for v in series["values"]],
+                      dtype=float)
+    finite = np.isfinite(values)
+    if int(finite.sum()) < 10:
+        return None, (f"Too few years with data (n = {int(finite.sum())}) "
+                      "to test a trend.")
+    mk = mann_kendall(values, years, correction="hamed-rao", lag=3)
+    trend = {
+        "slope_per_decade": round(mk["slope_per_decade"], 4),
+        "ci_lo_per_decade": round(mk["ci_lo"] * 10, 4),
+        "ci_hi_per_decade": round(mk["ci_hi"] * 10, 4),
+        "p_value": mk["p_value"],
+        "significant": mk["significant"],
+        "n": mk["n"],
+        "trend": mk["trend"],
+        "median_year": float(np.median(years[finite])),
+        "median_value": float(np.median(values[finite])),
+    }
+    verdict_text = verdict(
+        {"slope_per_decade": mk["slope_per_decade"],
+         "p_value": mk["p_value"], "significant": mk["significant"],
+         "n": mk["n"]},
+        series["unit"], label)
+    return trend, verdict_text
+
+
+def _map_q(variable, cell_lat, cell_lon):
+    """(q_value, significant_bh) for a cell from the precomputed annual
+    map, or (None, None) when the map has no value there."""
+    default_map = _load_map_payload(variable)
+    ilat = int(np.argmin(np.abs(np.array(default_map["lat"]) - cell_lat)))
+    ilon = int(np.argmin(np.abs(np.array(default_map["lon"]) - cell_lon)))
+    q = default_map["q_value"][ilat][ilon]
+    return q, (None if q is None
+               else bool(default_map["significant"][ilat][ilon]))
+
+
 @app.route("/api/cell")
 def cell_data():
     """Time series + Mann-Kendall trend for the grid cell at (lat, lon).
@@ -225,46 +276,45 @@ def cell_data():
     except (FileNotFoundError, OSError) as exc:
         return jsonify({"error": str(exc)}), 503
     series = cell_series(cache, lat, lon)
-    years = np.array(series["years"], dtype=float)
-    values = np.array([np.nan if v is None else v for v in series["values"]],
-                      dtype=float)
-    finite = np.isfinite(values)
     label = "precipitation" if variable == "precipitation" else "temperature"
     payload = dict(series)
     payload["variable"] = label
-    if int(finite.sum()) >= 10:
-        mk = mann_kendall(values, years, correction="hamed-rao", lag=3)
-        payload["trend"] = {
-            "slope_per_decade": round(mk["slope_per_decade"], 4),
-            "ci_lo_per_decade": round(mk["ci_lo"] * 10, 4),
-            "ci_hi_per_decade": round(mk["ci_hi"] * 10, 4),
-            "p_value": mk["p_value"],
-            "significant": mk["significant"],
-            "n": mk["n"],
-            "trend": mk["trend"],
-            "median_year": float(np.median(years[finite])),
-            "median_value": float(np.median(values[finite])),
-        }
-        payload["verdict"] = verdict(
-            {"slope_per_decade": mk["slope_per_decade"],
-             "p_value": mk["p_value"], "significant": mk["significant"],
-             "n": mk["n"]},
-            series["unit"], label)
+    payload["records"] = record_years(series["years"], series["values"])
+    trend, verdict_text = _cell_trend(series, label)
+    payload["trend"] = trend
+    payload["verdict"] = verdict_text
+    if trend is not None:
         try:
-            default_map = _load_map_payload(variable)
-            ilat = int(np.argmin(np.abs(np.array(default_map["lat"]) - series["cell_lat"])))
-            ilon = int(np.argmin(np.abs(np.array(default_map["lon"]) - series["cell_lon"])))
-            payload["trend"]["q_value"] = default_map["q_value"][ilat][ilon]
-            payload["trend"]["significant_bh"] = bool(
-                default_map["significant"][ilat][ilon])
+            q_value, significant_bh = _map_q(variable, series["cell_lat"],
+                                             series["cell_lon"])
         except (FileNotFoundError, KeyError, IndexError):
-            payload["trend"]["q_value"] = None
-            payload["trend"]["significant_bh"] = None
-    else:
-        payload["trend"] = None
-        payload["verdict"] = (
-            f"Too few years with data (n = {int(finite.sum())}) to test a trend.")
+            q_value, significant_bh = None, None
+        payload["trend"]["q_value"] = q_value
+        payload["trend"]["significant_bh"] = significant_bh
     return jsonify(payload)
+
+
+# In-memory cache of the hotspots (the precomputed maps never change
+# while the app runs).
+_HOTSPOTS_CACHE = None
+
+
+@app.route("/api/hotspots")
+def hotspots():
+    """Top cells where significant warming meets significant drying
+    (drought risk) or significant wetting (flood risk).
+
+    Both signals must be significant after Benjamini-Hochberg FDR
+    (q <= 0.05) on the precomputed annual maps; see
+    src/grid.py:find_hotspots for the alignment and the ordering.
+    """
+    global _HOTSPOTS_CACHE
+    if _HOTSPOTS_CACHE is None:
+        try:
+            _HOTSPOTS_CACHE = find_hotspots(GRID_DIR)
+        except (FileNotFoundError, OSError) as exc:
+            return jsonify({"error": str(exc)}), 503
+    return jsonify(_HOTSPOTS_CACHE)
 
 
 # ---------------------------------------------------------------------------
@@ -490,6 +540,357 @@ def seaice_data():
         "trends": trends,
         "verdict": verdict_text,
     })
+
+
+# ---------------------------------------------------------------------------
+# Plain-text findings report (/api/report)
+# ---------------------------------------------------------------------------
+
+
+def _coord_slug(lat, lon):
+    """'31n-75e' / '31.25n-73.75w' — a filename-safe cell label."""
+    def part(v, pos, neg):
+        return f"{abs(v):g}{pos if v >= 0 else neg}"
+    return f"{part(lat, 'n', 's')}-{part(lon, 'e', 'w')}"
+
+
+def _window_trend(years, values, start, end):
+    """Mann-Kendall + Sen's slope (+95% CI) for a year window, or None
+    when fewer than 5 finite years fall inside it."""
+    years = np.asarray(years, dtype=float)
+    values = np.asarray(values, dtype=float)
+    mask = (years >= start) & (years <= end) & np.isfinite(values)
+    if int(mask.sum()) < 5:
+        return None
+    mk = mann_kendall(values[mask], years[mask], correction="hamed-rao",
+                      lag=3)
+    return {"slope_per_decade": mk["slope_per_decade"],
+            "ci_lo_per_decade": mk["ci_lo"] * 10,
+            "ci_hi_per_decade": mk["ci_hi"] * 10,
+            "p_value": mk["p_value"],
+            "significant": bool(mk["significant"]),
+            "n": mk["n"],
+            "start_year": int(years[mask].min()),
+            "end_year": int(years[mask].max())}
+
+
+def _slope_text(slope, unit, p_value, n, ci_lo=None, ci_hi=None):
+    """'+0.246 °C/decade (95% CI +0.137 to +0.359, p ≈ 5.7×10⁻⁵, n = 44)'."""
+    text = f"{slope:+.3f} {unit}/decade"
+    if ci_lo is not None:
+        text += f" (95% CI {ci_lo:+.3f} to {ci_hi:+.3f})"
+    return f"{text} ({fmt_p(p_value)}, n = {n})"
+
+
+def _decade_table_text(decades, unit):
+    lines = []
+    for d in decades:
+        if d["slope_per_decade"] is None:
+            lines.append(f"  {d['decade']} ({d['start_year']}-{d['end_year']}): "
+                         f"too few years (n = {d['n']})")
+        else:
+            sig = "significant" if d["significant"] else "not significant"
+            lines.append(f"  {d['decade']}: "
+                         f"{_slope_text(d['slope_per_decade'], unit, d['p_value'], d['n'])}"
+                         f" — {sig}")
+    return "\n".join(lines)
+
+
+def _records_text(records, unit, high_word, low_word):
+    if records["max"] is None:
+        return "  No year has data."
+    return (f"  {high_word}: {records['max']['year']} "
+            f"({records['max']['value']:+.3f} {unit}); "
+            f"{low_word}: {records['min']['year']} "
+            f"({records['min']['value']:+.3f} {unit})")
+
+
+def _changepoint_text(result, unit):
+    """One honest change-point line (or the honest 'none' line)."""
+    if not result["supported"]:
+        p = result["p_value"]
+        return ("No supported change point in this series "
+                f"({fmt_p(p) if p is not None else 'permutation test unavailable'}).")
+    before, after = result["before"], result["after"]
+    ratio = ""
+    if (before["slope_per_decade"] and after["slope_per_decade"]
+            and before["slope_per_decade"] > 0):
+        ratio = (f" — about "
+                 f"{after['slope_per_decade'] / before['slope_per_decade']:.1f}x "
+                 "faster")
+    return (f"Change detected around {result['break_year']} "
+            f"({fmt_p(result['p_value'])}): "
+            f"{_slope_text(before['slope_per_decade'], unit, before['p_value'], before['n'])} "
+            f"before ({before['start_year']}-{before['end_year']}), "
+            f"{_slope_text(after['slope_per_decade'], unit, after['p_value'], after['n'])} "
+            f"after ({after['start_year']}-{after['end_year']}){ratio}.\n"
+            "  (Caveat: the CUSUM peak marks where the series crosses its "
+            "single-line fit, so \"around\" is the claim, not the exact year.)")
+
+
+def _lahore_neighbour_window_slopes(cache):
+    """1981-2024 Mann-Kendall slopes of the 8 cells around Lahore's
+    (31N, 75E) cell, computed from the gridded cache."""
+    slopes = []
+    for dlat in (-2, 0, 2):
+        for dlon in (-2, 0, 2):
+            if dlat == 0 and dlon == 0:
+                continue
+            s = cell_series(cache, 31.0 + dlat, 75.0 + dlon)
+            yy = np.array(s["years"], dtype=float)
+            vv = np.array([np.nan if v is None else v for v in s["values"]],
+                          dtype=float)
+            w = _window_trend(yy, vv, 1981, 2024)
+            if w is not None:
+                slopes.append(w["slope_per_decade"])
+    return slopes
+
+
+def _cell_report(variable, lat, lon):
+    """(filename, text) findings report for one grid cell.
+
+    Every number is computed here from the cached real data: the
+    full-period trend, the 1981-2024 window (same Mann-Kendall test),
+    the decade table, the cell's own change-point scan, and — only for
+    the Lahore temperature cell — the POWER-vs-GISTEMP disagreement
+    note, with the POWER numbers computed live from the Lahore series.
+    """
+    cache = load_dataset(variable, GRID_DIR)
+    series = cell_series(cache, lat, lon)
+    label = "precipitation" if variable == "precipitation" else "temperature"
+    unit = series["unit"]
+    years = np.array(series["years"], dtype=float)
+    values = np.array([np.nan if v is None else v for v in series["values"]],
+                      dtype=float)
+    finite = np.isfinite(values)
+    trend, verdict_text = _cell_trend(series, label)
+    records = record_years(series["years"], series["values"])
+    window = _window_trend(years, values, 1981, 2024)
+    decades, full_period = decadal_trends(years, values)
+    changepoint = detect_changepoint(years, values)
+    high_word = "Wettest" if label == "precipitation" else "Warmest"
+    low_word = "Driest" if label == "precipitation" else "Coldest"
+
+    lines = [
+        "TREND DETECTIVE — FINDINGS FOR ONE GRID CELL",
+        "=" * 45,
+        f"Location: cell centre {series['cell_lat']:g}°, {series['cell_lon']:g}° "
+        f"(nearest to {lat:g}°, {lon:g}°)",
+        f"Variable: {VARIABLES[variable]['label']} — "
+        f"{series['source']} ({unit})",
+        f"Period: {int(years[finite].min()) if finite.any() else '—'}-"
+        f"{int(years[finite].max()) if finite.any() else '—'}, "
+        f"n = {int(finite.sum())} years with data",
+        "",
+        "TREND (Mann-Kendall + Sen's slope, Hamed-Rao autocorrelation "
+        "correction, lag 3)",
+    ]
+    if trend is None:
+        lines.append(f"  {verdict_text}")
+    else:
+        try:
+            q_value, significant_bh = _map_q(variable, series["cell_lat"],
+                                             series["cell_lon"])
+        except (FileNotFoundError, KeyError, IndexError):
+            q_value, significant_bh = None, None
+        lines.append("  " + _slope_text(trend["slope_per_decade"], unit,
+                                        trend["p_value"], trend["n"],
+                                        trend["ci_lo_per_decade"],
+                                        trend["ci_hi_per_decade"]))
+        if q_value is None:
+            lines.append("  Benjamini-Hochberg q-value unavailable for this cell.")
+        else:
+            bh = ("significant after Benjamini-Hochberg FDR (q ≤ 0.05)"
+                  if significant_bh else
+                  "not significant after Benjamini-Hochberg FDR (q > 0.05)")
+            q_text = "q < 0.001" if q_value <= 0 else f"q = {q_value:.3g}"
+            lines.append(f"  {q_text} — {bh}")
+        lines.append(f"  Verdict: {verdict_text}")
+    lines += [
+        "",
+        "RECORD YEARS",
+        _records_text(records, unit, high_word, low_word),
+        "",
+        "1981–2024 WINDOW (same Mann-Kendall test, same cell)",
+    ]
+    if window is None:
+        lines.append("  Too few years with data in 1981–2024 to test.")
+    else:
+        lines.append("  " + _slope_text(window["slope_per_decade"], unit,
+                                        window["p_value"], window["n"],
+                                        window["ci_lo_per_decade"],
+                                        window["ci_hi_per_decade"])
+                     + (" — significant" if window["significant"]
+                        else " — not significant"))
+    lines += [
+        "",
+        "TREND BY DECADE",
+        _decade_table_text(decades, unit),
+        "",
+        "CHANGE POINT (CUSUM scan + 2,000-shuffle permutation test)",
+        "  " + _changepoint_text(changepoint, unit),
+    ]
+    if (variable == "temperature" and series["cell_lat"] == 31.0
+            and series["cell_lon"] == 75.0):
+        pyears, pvalues, _ = load_series("lahore", "temperature")
+        ptrend = analyse_trend(pyears, pvalues)
+        neighbours = _lahore_neighbour_window_slopes(cache)
+        lines += [
+            "",
+            "NOTE — LAHORE: THE TWO DATASETS DISAGREE",
+            "  The NASA POWER point series for Lahore (1981–2024) shows "
+            f"no significant warming: {_slope_text(ptrend['slope_per_decade'], '°C', ptrend['p_value'], ptrend['n'])}.",
+            "  The GISTEMP map cell above says the opposite over the same "
+            "1981–2024 window" + (f": {_slope_text(window['slope_per_decade'], '°C', window['p_value'], window['n'])}." if window else "."),
+        ]
+        if neighbours:
+            lines.append(
+                f"  All {len(neighbours)} neighbouring GISTEMP cells with data agree: "
+                f"over the same window they warm at "
+                f"{min(neighbours):+.2f} to {max(neighbours):+.2f} °C/decade.")
+        lines.append(
+            "  The honest finding is a dataset disagreement, not \"Lahore is "
+            "not warming\": the station-based GISTEMP record says Lahore warms "
+            "like the rest of the region; the POWER reanalysis point series "
+            "says it does not.")
+    lines += [
+        "",
+        "DATA SOURCES",
+        f"  {series['source']} — {series['source_url']}",
+        "METHOD",
+        "  Mann-Kendall test + Sen's slope (stats/mannkendall.py), Hamed-Rao "
+        "autocorrelation correction (lag 3); Benjamini-Hochberg "
+        "false-discovery control, alpha 0.05. A coloured cell on the map is "
+        "one with q ≤ 0.05.",
+        "  Generated by Trend Detective (NASA Space Apps 2026) from the "
+        "cached real data — no numbers invented.",
+    ]
+    slug = _coord_slug(series["cell_lat"], series["cell_lon"])
+    filename = f"trend-detective-findings-{slug}-{variable}.txt"
+    return filename, "\n".join(lines) + "\n"
+
+
+def _global_report(variable):
+    """(filename, text) global findings report for one variable."""
+    years, values, meta = _global_series(variable)
+    label = "precipitation" if variable == "precipitation" else "temperature"
+    unit = meta["unit"]
+    years_a = np.array(years, dtype=float)
+    values_a = np.array(values, dtype=float)
+    decades, full = decadal_trends(years_a, values_a)
+    records = record_years(years, values)
+    changepoint = detect_changepoint(years, values)
+    high_word = "Wettest" if label == "precipitation" else "Warmest"
+    low_word = "Driest" if label == "precipitation" else "Coldest"
+
+    lines = [
+        "TREND DETECTIVE — GLOBAL FINDINGS",
+        "=" * 40,
+        f"Variable: {meta['variable']} — {meta['source']} ({unit})",
+        f"Region: {meta['region']}",
+        "",
+        "HEADLINE",
+    ]
+    if variable == "temperature":
+        lines.append(
+            "  Full record "
+            f"({full['start_year']}-{full['end_year']}, n = {full['n']}): "
+            + _slope_text(full["slope_per_decade"], unit, full["p_value"],
+                          full["n"])
+            + (" — significant" if full["significant"] else " — not significant"))
+        window = _window_trend(years_a, values_a, 1981, 2025)
+        if window is not None:
+            lines.append(
+                "  Since 1981 "
+                f"({window['start_year']}-{window['end_year']}, n = {window['n']}): "
+                + _slope_text(window["slope_per_decade"], unit,
+                              window["p_value"], window["n"],
+                              window["ci_lo_per_decade"],
+                              window["ci_hi_per_decade"])
+                + (" — significant" if window["significant"] else " — not significant"))
+    else:
+        lines.append(
+            "  Full record "
+            f"({full['start_year']}-{full['end_year']}, n = {full['n']}): "
+            + _slope_text(full["slope_per_decade"], unit, full["p_value"],
+                          full["n"])
+            + (" — significant" if full["significant"] else " — not significant")
+            + " (area-weighted mean of the GPCP gridded cache)")
+    lines += [
+        "",
+        "RECORD YEARS",
+        _records_text(records, unit, high_word, low_word),
+        "",
+        "TREND BY DECADE",
+        _decade_table_text(decades, unit),
+        "",
+        "CHANGE POINT (CUSUM scan + 2,000-shuffle permutation test)",
+        "  " + _changepoint_text(changepoint, unit),
+        "",
+        "ARCTIC SEA ICE — A THIRD, INDEPENDENT WITNESS",
+    ]
+    try:
+        cache = load_seaice_cache()
+        syears = cache["years"].astype(float)
+        for key, name in (("september", "September (minimum)"),
+                          ("march", "March (maximum)"),
+                          ("annual_mean", "Annual mean")):
+            mk = mann_kendall(cache[key].astype(float), syears,
+                              correction="hamed-rao", lag=3)
+            lines.append(
+                f"  {name}: "
+                f"{_slope_text(mk['slope_per_decade'], SEAICE_UNIT, mk['p_value'], mk['n'])}"
+                f", from {float(cache[key][0]):.2f} in {int(syears[0])} "
+                f"to {float(cache[key][-1]):.2f} in {int(syears[-1])}.")
+        sept = cache["september"]
+        i_min = int(np.argmin(sept))
+        lines.append(f"  Record-low September: {float(sept[i_min]):.2f} "
+                     f"million km² in {int(cache['years'][i_min])}.")
+    except (FileNotFoundError, OSError) as exc:
+        lines.append(f"  Sea ice cache unavailable: {exc}")
+    lines += [
+        "",
+        "DATA SOURCES",
+        f"  {meta['source']} — {meta['url']}",
+        f"  {SEAICE_SOURCE} — {SEAICE_URL}",
+        "METHOD",
+        "  Mann-Kendall test + Sen's slope (stats/mannkendall.py), Hamed-Rao "
+        "autocorrelation correction (lag 3); Benjamini-Hochberg "
+        "false-discovery control, alpha 0.05, on the map cells. Change "
+        "point: CUSUM scan on OLS residuals, support by permutation test.",
+        "  Generated by Trend Detective (NASA Space Apps 2026) from the "
+        "cached real data — no numbers invented.",
+    ]
+    filename = f"trend-detective-findings-global-{variable}.txt"
+    return filename, "\n".join(lines) + "\n"
+
+
+@app.route("/api/report")
+def report():
+    """Plain-text findings report as JSON: {"filename": ..., "text": ...}.
+
+    Query params: variable=temperature|precipitation (default
+    temperature); without lat/lon the global report, with lat/lon the
+    report for that grid cell.  Every number is computed server-side
+    from the cached real data.
+    """
+    variable = request.args.get("variable", "temperature")
+    if variable not in DATASETS:
+        return jsonify({"error": f"unknown variable: {variable}"}), 400
+    try:
+        pair = _parse_lat_lon_pair()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    try:
+        if pair is None:
+            filename, text = _global_report(variable)
+        else:
+            filename, text = _cell_report(variable, *pair)
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    except OSError as exc:
+        return jsonify({"error": str(exc)}), 503
+    return jsonify({"filename": filename, "text": text})
 
 
 if __name__ == "__main__":

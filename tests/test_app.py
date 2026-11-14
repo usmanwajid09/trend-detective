@@ -63,6 +63,19 @@ def test_summary_covers_all_series(client):
     assert lahore_rain["significant"] is True
 
 
+def test_series_records(client):
+    """Record years ride along in /api/series (global and regional)."""
+    d = client.get("/api/series?region=global&variable=temperature").get_json()
+    assert d["records"] == {"max": {"year": 2024, "value": 1.28},
+                            "min": {"year": 1909, "value": -0.48}}
+    d = client.get("/api/series?region=lahore&variable=temperature").get_json()
+    assert d["records"] == {"max": {"year": 1999, "value": 27.428},
+                            "min": {"year": 2020, "value": 23.866}}
+    d = client.get("/api/series?region=lahore&variable=precipitation").get_json()
+    assert d["records"] == {"max": {"year": 2023, "value": 3.272},
+                            "min": {"year": 1998, "value": 0.611}}
+
+
 def test_bad_region_is_400(client):
     resp = client.get("/api/series?region=nowhere&variable=temperature")
     assert resp.status_code == 400

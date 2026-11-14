@@ -352,6 +352,79 @@ def load_trend_map(path):
     return result
 
 
+def _lon_180(lon):
+    """Longitude into the -180..180 convention (the temperature grid
+    already uses it; the precipitation grid uses 0..360)."""
+    return ((float(lon) + 180.0) % 360.0) - 180.0
+
+
+def find_hotspots(grid_dir=GRID_DIR, top=10):
+    """Cells where significant warming meets significant drying
+    (drought risk) or significant wetting (flood risk).
+
+    Loads the two precomputed ANNUAL trend maps and aligns the
+    2.5-degree precipitation cells with the nearest 2-degree
+    temperature cell (at most 0.75 degrees away on either axis).
+    A cell qualifies only when BOTH variables are significant after
+    Benjamini-Hochberg FDR (q <= 0.05) and the temperature slope is
+    positive; drought needs a negative precipitation slope, flood a
+    positive one.  NaN slopes/p/q-values never qualify.
+
+    Ordering (documented, because either variable could lead): the
+    drought list is ranked by temperature slope — how fast the cell is
+    warming, the driver of evaporation and drought risk; the flood
+    list by precipitation slope — how fast rainfall is increasing,
+    the driver of flood risk.  Lat/lon are the precipitation-cell
+    centre, normalised to -180..180.
+    """
+    temp = load_trend_map(os.path.join(
+        grid_dir, DATASETS["temperature"]["map_file"]))
+    precip = load_trend_map(os.path.join(
+        grid_dir, DATASETS["precipitation"]["map_file"]))
+    t_lat, t_lon = temp["lat"], temp["lon"]
+    t_lon360 = np.where(t_lon < 0, t_lon + 360.0, t_lon)
+    p_lat, p_lon = precip["lat"], precip["lon"]
+    ilat = np.argmin(np.abs(t_lat[:, None] - p_lat[None, :]), axis=0)
+    ilon = np.argmin(np.abs(t_lon360[:, None] - p_lon[None, :]), axis=0)
+    t_slope = temp["slope_per_decade"][np.ix_(ilat, ilon)]
+    t_p = temp["p_value"][np.ix_(ilat, ilon)]
+    t_q = temp["q_value"][np.ix_(ilat, ilon)]
+    t_sig = temp["significant"][np.ix_(ilat, ilon)]
+    p_slope = precip["slope_per_decade"]
+    p_p = precip["p_value"]
+    p_q = precip["q_value"]
+    p_sig = precip["significant"]
+    finite = (np.isfinite(t_slope) & np.isfinite(p_slope)
+              & np.isfinite(t_q) & np.isfinite(p_q))
+    base = finite & t_sig & (t_slope > 0) & p_sig
+    drought_mask = base & (p_slope < 0)
+    flood_mask = base & (p_slope > 0)
+
+    def entries(mask, sort_key):
+        idx = np.argwhere(mask)
+        rows = []
+        for i, j in idx:
+            rows.append({
+                "lat": round(float(p_lat[i]), 2),
+                "lon": round(_lon_180(p_lon[j]), 2),
+                "temp_slope_per_decade": round(float(t_slope[i, j]), 4),
+                "precip_slope_per_decade": round(float(p_slope[i, j]), 4),
+                "temp_p_value": float(t_p[i, j]),
+                "precip_p_value": float(p_p[i, j]),
+                "temp_q_value": float(t_q[i, j]),
+                "precip_q_value": float(p_q[i, j]),
+            })
+        rows.sort(key=sort_key, reverse=True)
+        return rows[:top]
+
+    return {
+        "drought": entries(drought_mask,
+                           lambda r: r["temp_slope_per_decade"]),
+        "flood": entries(flood_mask,
+                         lambda r: r["precip_slope_per_decade"]),
+    }
+
+
 def build_map(dataset, grid_dir=GRID_DIR, cache_path=None, map_file=None,
               **kwargs):
     """Compute the default (full-period) trend map and save it.

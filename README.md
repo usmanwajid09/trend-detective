@@ -23,7 +23,7 @@ python3 -m venv .venv
 # open http://127.0.0.1:5000
 ```
 
-Tests: `.venv/bin/python -m pytest tests/ -q` (51 tests, all passing).
+Tests: `.venv/bin/python -m pytest tests/ -q` (109 tests, all passing).
 
 To re-download the data: `.venv/bin/python -m src.fetch_data`
 (it only writes real downloads — a failed download is reported, never faked).
@@ -222,7 +222,13 @@ independent witness to the same warming — not a map, one line chart.
    Then the ice: "And the ice agrees — September Arctic sea ice has
    shrunk from 7.1 to 4.8 million square kilometres since 1979, losing
    about three-quarters of a million per decade."
-6. End on the **global trend map**. "The whole planet, one honest test per
+6. New: **hotspots**. "The map can now pair the two variables. 421 cells
+   are warming *and* drying — drought risk — the fastest is Saudi Arabia,
+   24° North, warming 0.57 °C per decade while its rain falls. And 636
+   cells are warming and getting wetter — flood risk — the wettest is the
+   Caribbean, 9° North, at plus 0.46 millimetres a day per decade. Both
+   signals are significant after false-discovery correction."
+7. End on the **global trend map**. "The whole planet, one honest test per
    cell — 6,170 cells warming, only 86 cooling, after correcting for false
    discoveries. Click anywhere and you get its full series with the trend
    line and confidence band."
@@ -232,12 +238,14 @@ independent witness to the same warming — not a map, one line chart.
 ```
 app.py            Flask app (routes + API: /api/series, /api/summary,
                   /api/map, /api/cell, /api/decades, /api/changepoint,
-                  /api/seaice)
+                  /api/seaice, /api/hotspots, /api/report)
 src/
   data.py         loads the cached NASA datasets
-  trends.py       OLS trend + p-value + plain-language verdict
+  trends.py       OLS trend + p-value + plain-language verdict; record_years
+                  (warmest/coldest or wettest/driest year of a series)
   fetch_data.py   re-downloads the datasets from NASA (--grid for NetCDF)
-  grid.py         gridded loaders, seasons, cache build, trend maps
+  grid.py         gridded loaders, seasons, cache build, trend maps;
+                  find_hotspots (warming+drying / warming+wetting cells)
   changepoint.py  CUSUM change-point scan + permutation test
   seaice.py       NSIDC Sea Ice Index monthly CSVs -> extent cache
 stats/
@@ -250,7 +258,7 @@ data/             cached real downloads (POWER JSON x2, GISTEMP CSV)
 data/grid/        committed caches: annual means + precomputed trend maps
                   (annual + seasonal DJF/MAM/JJA/SON, both variables)
 data/raw/         raw NetCDF (git-ignored, re-downloadable)
-tests/            pytest: trend maths + Flask routes (87 tests)
+tests/            pytest: trend maths + Flask routes (109 tests)
 .github/workflows/ci.yml   pytest on every push
 ```
 
@@ -268,5 +276,11 @@ disclosure of AI tools used — this line is that disclosure.
 - Milestones 3–4 from the implementation plan are done (time controls:
   decades + season selector + change-point; more variables: leaderboard
   and sea ice; Milestone 3's year-window slider already existed via
-  /api/map). Still open: Milestones 5–6 (contradictions/report export,
-  final polish).
+  /api/map).
+- Milestone 5 (contradictions/report export) is done: `/api/report`
+  returns a plain-text findings report for a cell or the globe (trend +
+  CI, 1981–2024 window, decade table, change point, record years, and the
+  Lahore dataset-disagreement note only for the Lahore cell), and
+  `/api/hotspots` lists the top warming+drying (drought risk) and
+  warming+wetting (flood risk) cells. Still open: Milestone 6 (final
+  polish).
