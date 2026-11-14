@@ -74,4 +74,6 @@ def summary():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Local dev: python app.py  -> http://127.0.0.1:5000
+    # Hosting (Render etc.) sets $PORT; gunicorn runs `app:app` instead.
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
