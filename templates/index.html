@@ -406,6 +406,8 @@
           gridded &mdash; 2&deg; temperature anomaly maps, 1880&ndash;2026.</li>
           <li><a href="https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc">GPCP v2.3</a>
           &mdash; 2.5&deg; precipitation maps, 1979&ndash;2026.</li>
+          <li>Country borders on the map &mdash; Natural Earth polygons
+          (public domain), drawn as a thin outline so the geography stays readable.</li>
         </ul>
         <p>Each map cell gets a <strong>Mann-Kendall test</strong> with
         <strong>Sen&rsquo;s slope</strong> (the median of all pairwise slopes, so one
@@ -948,7 +950,35 @@ function updateSeasonLabel() {
 function unitFor(variable) { return variable === 'precipitation' ? 'mm/day' : '\u00B0C'; }
 const mapTooltip = $('map-tooltip');
 let mapData = null;
-let leafletMap = null, overlay = null;
+let leafletMap = null, overlay = null, bordersLayer = null;
+/* Country borders drawn ABOVE the trend overlay so the geography stays
+   readable at world zoom: Natural Earth country polygons as GeoJSON,
+   fetched at runtime. The map works without them — if the fetch fails
+   the borders are simply absent, with no error shown to the user. */
+const BORDERS_URLS = [
+  'https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json',
+  'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json',
+];
+async function loadBorders() {
+  if (!leafletMap || bordersLayer) return;
+  for (const url of BORDERS_URLS) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const geojson = await res.json();
+      if (!geojson || !Array.isArray(geojson.features)) continue;
+      bordersLayer = L.geoJSON(geojson, {
+        style: { color: '#1f2933', weight: 1, opacity: 0.6,
+          fillOpacity: 0, interactive: false },
+      });
+      bordersLayer.addTo(leafletMap);
+      bordersLayer.bringToFront();
+      return;
+    } catch (err) {
+      /* Try the next mirror; if all fail, the map works without borders. */
+    }
+  }
+}
 let primaryMarker = null, compareMarker = null;
 let primaryCell = null;   /* {lat, lon, payload} */
 let compareCell = null;   /* {lat, lon, payload} or null */
@@ -1052,6 +1082,7 @@ function initLeaflet() {
   leafletMap.on('mousemove', onMapMouseMove);
   leafletMap.on('mouseout', () => { mapTooltip.hidden = true; });
   leafletMap.on('click', onMapClick);
+  loadBorders();
 }
 
 function nearestCell(lat, lng) {
@@ -1124,6 +1155,9 @@ async function loadMap() {
       }
       if (primaryMarker) primaryMarker.addTo(leafletMap);
       if (compareMarker) compareMarker.addTo(leafletMap);
+      /* The repainted overlay lands last in its pane, so keep the
+         country borders on top of it. */
+      if (bordersLayer) bordersLayer.bringToFront();
     }
     renderLeaderboard();
   } finally {
@@ -1468,6 +1502,10 @@ async function loadDecadesGlobal() {
     renderDecadesChart(d);
   } catch (err) {
     if (token !== decadesState.globalToken) return;
+    /* Never leave a stale table/chart from the previous variable
+       showing under the error notice. */
+    $('decades-tbody').innerHTML = '';
+    if (decadesState.chart) { decadesState.chart.destroy(); decadesState.chart = null; }
     note.hidden = false;
     note.textContent = 'Decade-by-decade trends are not available yet (' + err.message +
       '). The full-period map and cell inspector above still work.';
@@ -1504,6 +1542,9 @@ async function loadChangepoint() {
   const el = $('changepoint-callout');
   const variable = mapVarSel.value;
   const unit = unitFor(variable);
+  /* Reset the text first, so a switch never leaves the previous
+     variable's verdict showing while the new one loads. */
+  el.textContent = 'Checking whether the trend changed pace\u2026';
   try {
     const res = await fetch('/api/changepoint?variable=' + variable);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1568,6 +1609,26 @@ async function loadSeaice() {
   }
 }
 
+/* Pick up to 10 cells from a slope-sorted list, skipping any candidate
+   within minDeg degrees (latitude and longitude) of an already-picked
+   cell, so the leaderboard reads as 10 distinct places instead of 10
+   neighbouring grid cells. Longitude wraps at the antimeridian. */
+function dedupCells(sortedCells, minDeg) {
+  const picked = [];
+  for (const c of sortedCells) {
+    let near = false;
+    for (const p of picked) {
+      if (Math.abs(c.lat - p.lat) > minDeg) continue;
+      let dLon = Math.abs(c.lon - p.lon) % 360;
+      if (dLon > 180) dLon = 360 - dLon;
+      if (dLon <= minDeg) { near = true; break; }
+    }
+    if (!near) picked.push(c);
+    if (picked.length >= 10) break;
+  }
+  return picked;
+}
+
 /* ---------- Leaderboard (computed in the browser from mapData) ---------- */
 function renderLeaderboard() {
   const tbody = $('leaderboard-tbody');
@@ -1600,9 +1661,8 @@ function renderLeaderboard() {
   let html = '';
   const counts = {};
   groups.forEach((g) => {
-    const sorted = cells.slice()
-      .sort((a, b) => (g.dir === -1 ? b.slope - a.slope : a.slope - b.slope))
-      .slice(0, 10);
+    const sorted = dedupCells(cells.slice()
+      .sort((a, b) => (g.dir === -1 ? b.slope - a.slope : a.slope - b.slope)), 4);
     counts[g.key] = sorted.length;
     html += '<tr class="lb-group"><td colspan="5">' + g.label + '</td></tr>';
     sorted.forEach((c, idx) => {

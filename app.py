@@ -22,8 +22,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.changepoint import detect_changepoint  # noqa: E402
 from src.data import REGIONS, VARIABLES, load_series  # noqa: E402
-from src.grid import (DATASETS, SEASONS, cell_series, load_dataset,  # noqa: E402
-                      load_trend_map, trend_map)
+from src.grid import (DATASETS, SEASONS, cell_series, global_mean_series,  # noqa: E402
+                      load_dataset, load_trend_map, trend_map)
 from src.seaice import (SOURCE as SEAICE_SOURCE,  # noqa: E402
                         SOURCE_URL as SEAICE_URL, UNIT as SEAICE_UNIT,
                         load_cache as load_seaice_cache)
@@ -346,6 +346,29 @@ def _parse_lat_lon_pair():
     return lat, lon
 
 
+def _global_series(variable):
+    """Global mean series for /api/decades and /api/changepoint.
+
+    Temperature keeps the published GISTEMP global (J-D) series.
+    Precipitation has no published global series, so its global mean is
+    the area-weighted mean of the GPCP gridded cache
+    (data/grid/precipitation.npz) — same Mann-Kendall method as
+    temperature, just a different source.  Returns (years, values, meta).
+    """
+    if variable == "temperature":
+        return load_series("global", "temperature")
+    cache = load_dataset(variable, GRID_DIR)
+    years, values = global_mean_series(cache)
+    meta = {"source": cache["meta"]["source"],
+            "url": cache["meta"]["source_url"],
+            "region": "Global (land + ocean)",
+            "variable": VARIABLES[variable]["label"],
+            "unit": cache["meta"]["unit"],
+            "note": "GPCP: area-weighted global mean of the gridded "
+                    "annual means."}
+    return [int(y) for y in years], [float(v) for v in values], meta
+
+
 @app.route("/api/decades")
 def decades():
     """Mann-Kendall trend per calendar decade (1980s-2020s).
@@ -363,7 +386,7 @@ def decades():
         return jsonify({"error": str(exc)}), 400
     try:
         if pair is None:
-            years, values, meta = load_series("global", variable)
+            years, values, meta = _global_series(variable)
             label_text = "Global mean"
             unit = meta["unit"]
             source = meta["source"]
@@ -399,14 +422,15 @@ def changepoint():
     src/changepoint.py for the method in plain words).
 
     Query param: variable=temperature|precipitation (default temperature).
-    Only the global series is analysed, so precipitation — which has no
-    global series — returns 400.
+    Only the global series is analysed: temperature uses the published
+    GISTEMP global series, precipitation the area-weighted mean of the
+    GPCP gridded cache (see _global_series).
     """
     variable = request.args.get("variable", "temperature")
     if variable not in DATASETS:
         return jsonify({"error": f"unknown variable: {variable}"}), 400
     try:
-        years, values, meta = load_series("global", variable)
+        years, values, meta = _global_series(variable)
     except (ValueError, FileNotFoundError) as exc:
         return jsonify({"error": str(exc)}), 400
     result = detect_changepoint(years, values)

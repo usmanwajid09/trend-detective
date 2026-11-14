@@ -158,6 +158,38 @@ def test_lahore_power_vs_gistemp():
     assert mk["ci_lo"] > 0  # the whole 95% CI sits above zero
 
 
+def test_global_mean_series_area_weighted():
+    """Cosine-of-latitude weighting: a uniform field returns the same
+    value, and the poles (tiny area) barely move the mean."""
+    cache = {
+        "years": np.array([2000, 2001], dtype=np.int32),
+        "lat": np.array([-88.0, 0.0, 88.0], dtype=np.float32),
+        "lon": np.array([0.0, 90.0], dtype=np.float32),
+        "values": np.array([[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]],
+                            [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]],
+                           dtype=np.float32),
+    }
+    years, values = grid.global_mean_series(cache)
+    assert list(years) == [2000, 2001]
+    assert values == pytest.approx([1.0, 2.0])
+    # Only the pole cells hold data: the mean is still their value.
+    cache["values"][:, 1, :] = np.nan
+    _, values = grid.global_mean_series(cache)
+    assert values == pytest.approx([1.0, 2.0])
+
+
+def test_global_mean_series_real_precipitation_cache():
+    """The real GPCP cache: global mean rainfall is ~2.7 mm/day every
+    year, so the series is a flat sanity anchor for the decades API."""
+    cache = grid.load_dataset("precipitation")
+    years, values = grid.global_mean_series(cache)
+    assert (years[0], years[-1], len(years)) == (1979, 2026, 48)
+    assert np.isfinite(values).all()
+    assert values[0] == pytest.approx(2.672, abs=0.01)
+    assert values[-1] == pytest.approx(2.711, abs=0.05)
+    assert float(np.mean(values)) == pytest.approx(2.69, abs=0.05)
+
+
 def test_fetch_grid_jobs():
     from src.fetch_data import GRID_JOBS
 

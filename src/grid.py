@@ -278,6 +278,26 @@ def cell_series(cache, lat, lon):
     }
 
 
+def global_mean_series(cache):
+    """Area-weighted global mean series from a gridded cache.
+
+    Cosine-of-latitude weights (area on a lat/lon grid); each year
+    averages only the cells that have data, so a year is NaN only when
+    no cell has data at all.  Returns (years, values) as arrays.
+    """
+    years = cache["years"]
+    values = cache["values"]
+    weights = np.cos(np.deg2rad(cache["lat"].astype(np.float64)))
+    out = np.full(len(years), np.nan)
+    for t in range(len(years)):
+        v = values[t].astype(np.float64)
+        finite = np.isfinite(v)
+        if finite.any():
+            w = np.broadcast_to(weights[:, None], v.shape)[finite]
+            out[t] = float(np.average(v[finite], weights=w))
+    return years.astype(np.int32), out
+
+
 def trend_map(cache, alpha=0.05, min_n=10, correction="hamed-rao", lag=3,
               start_year=None, end_year=None):
     """Per-cell Mann-Kendall trends for a cache, with BH FDR control.

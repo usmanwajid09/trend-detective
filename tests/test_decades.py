@@ -108,10 +108,33 @@ def test_decades_sparse_decades_are_null():
     assert full2["n"] == 3
 
 
+def test_decades_global_precipitation(client):
+    """Precipitation has a global series too: the area-weighted mean of
+    the GPCP gridded cache. It is essentially flat — no decade is
+    significant — which is itself the honest finding."""
+    resp = client.get("/api/decades?variable=precipitation")
+    assert resp.status_code == 200
+    d = resp.get_json()
+    assert d["variable"] == "precipitation"
+    assert d["unit"] == "mm/day"
+    assert d["label"] == "Global mean"
+    assert d["source"] == "GPCP Version 2.3"
+    assert [x["n"] for x in d["decades"]] == [10, 10, 10, 10, 7]
+    by_decade = {x["decade"]: x for x in d["decades"]}
+    assert by_decade["1980s"]["slope_per_decade"] == pytest.approx(0.0042, abs=0.005)
+    assert by_decade["1990s"]["slope_per_decade"] == pytest.approx(0.0635, abs=0.005)
+    assert by_decade["2000s"]["slope_per_decade"] == pytest.approx(0.0135, abs=0.005)
+    assert by_decade["2010s"]["slope_per_decade"] == pytest.approx(-0.0149, abs=0.005)
+    assert by_decade["2020s"]["slope_per_decade"] == pytest.approx(0.091, abs=0.005)
+    assert all(x["significant"] is False for x in d["decades"])
+    full = d["full_period"]
+    assert (full["start_year"], full["end_year"], full["n"]) == (1979, 2026, 48)
+    assert full["slope_per_decade"] == pytest.approx(0.0016, abs=0.005)
+    assert full["significant"] is False
+
+
 def test_decades_bad_params(client):
     assert client.get("/api/decades?variable=ice").status_code == 400
-    # global has no precipitation series
-    assert client.get("/api/decades?variable=precipitation").status_code == 400
     # half a lat/lon pair
     assert client.get("/api/decades?lat=31").status_code == 400
     assert client.get("/api/decades?lon=75").status_code == 400

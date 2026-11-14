@@ -100,7 +100,18 @@ def test_endpoint_shape_and_values(client):
     assert d["after"]["slope_per_decade"] > d["before"]["slope_per_decade"]
 
 
+def test_endpoint_precipitation(client):
+    """Global rainfall has no clear break (p = 0.51): the honest result
+    is 'unsupported', and the endpoint must answer 200, not 400."""
+    resp = client.get("/api/changepoint?variable=precipitation")
+    assert resp.status_code == 200
+    d = resp.get_json()
+    assert d["variable"] == "precipitation"
+    assert d["label"] == "Global mean"
+    assert d["supported"] is False
+    assert d["break_year"] is None
+    assert d["p_value"] == pytest.approx(0.512, abs=0.05)
+
+
 def test_endpoint_bad_variable(client):
     assert client.get("/api/changepoint?variable=ice").status_code == 400
-    # precipitation has no global series
-    assert client.get("/api/changepoint?variable=precipitation").status_code == 400
