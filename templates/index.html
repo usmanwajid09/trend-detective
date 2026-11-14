@@ -4,88 +4,199 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trend Detective — NASA Space Apps 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-<header>
-  <h1>🌍 Trend Detective</h1>
-  <p class="sub">What is changing, where, how much — and is it significant?
-     Built on real NASA data for the NASA Space Apps Challenge 2026.</p>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="badges">
+      <span class="pill pill-nasa">NASA SPACE APPS 2026</span>
+      <span class="pill">Team Overthinkers</span>
+      <span class="pill pill-challenge">Challenge: Be An Earth System Trend Detective!</span>
+    </div>
+    <h1>Trend Detective</h1>
+    <p class="pitch">What is changing, where, how much — and is it real?</p>
+    <p class="sub">One honest statistical test for every place on Earth, built on
+    real NASA data. Pick a region, a variable, or any cell on the map —
+    the app shows the trend, the numbers, and whether you can trust them.</p>
+
+    <div class="stats">
+      <article class="stat">
+        <div class="stat-value warm">+0.212 <span>°C / decade</span></div>
+        <div class="stat-label">Global warming, 1981–2025</div>
+        <div class="stat-badge sig">Significant · p ≈ 6×10⁻²¹</div>
+      </article>
+      <article class="stat">
+        <div class="stat-value warm">+0.194 <span>°C / decade</span></div>
+        <div class="stat-label">Reykjavik warming, 1981–2024</div>
+        <div class="stat-badge sig">Significant · p = 0.0009</div>
+      </article>
+      <article class="stat">
+        <div class="stat-value warn">Two answers</div>
+        <div class="stat-label">Lahore: POWER says no trend (−0.061 °C/decade),
+        GISTEMP says warming (+0.26 °C/decade)</div>
+        <div class="stat-badge flag">Dataset disagreement</div>
+      </article>
+      <article class="stat">
+        <div class="stat-value wet">+0.153 <span>mm/day / decade</span></div>
+        <div class="stat-label">Lahore rainfall, 1981–2024</div>
+        <div class="stat-badge sig">Significant · p = 0.016</div>
+      </article>
+    </div>
+  </div>
 </header>
 
 <main>
-  <section class="controls">
-    <label>Region
-      <select id="region">
-        {% for rid, r in regions.items() %}
-        <option value="{{ rid }}">{{ r.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Variable
-      <select id="variable">
-        {% for vid, v in variables.items() %}
-        <option value="{{ vid }}">{{ v.label }}</option>
-        {% endfor %}
-      </select>
-    </label>
-  </section>
-
-  <section class="chart-box">
-    <canvas id="chart"></canvas>
-  </section>
-
-  <section id="verdict" class="verdict">Loading…</section>
-
-  <section class="details">
-    <p id="meta"></p>
-    <p id="note" class="note"></p>
-  </section>
-
-  <section class="summary">
-    <h2>What changed, where, how much</h2>
-    <table id="summary-table">
-      <thead><tr><th>Region</th><th>Variable</th><th>Period</th>
-      <th>Change / decade</th><th>Significant?</th><th>Verdict</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <section class="map">
-    <h2>Global trend map</h2>
-    <p class="note">Every cell is one Mann-Kendall trend test. Coloured cells
-    passed the Benjamini-Hochberg check — a coloured cell is one you can
-    trust. Grey cells were tested but are not significant; blank areas have
-    too little data. Click any cell to see its time series.</p>
-    <label>Variable
-      <select id="map-variable">
-        <option value="temperature">Temperature</option>
-        <option value="precipitation">Precipitation</option>
-      </select>
-    </label>
-    <div class="map-box">
-      <canvas id="map-canvas" width="900" height="450"></canvas>
+  <!-- ============ Explore one place ============ -->
+  <section class="card explorer">
+    <div class="card-head">
+      <h2>Explore a place</h2>
+      <p class="card-sub">A real time series from NASA POWER or GISTEMP — with the
+      trend tested, not just drawn.</p>
     </div>
-    <p id="map-stats" class="note">Loading map…</p>
-    <p class="legend">
-      <span class="swatch" style="background:#2166ac"></span> cooling
-      <span class="swatch" style="background:#f7f7f7"></span> no change
-      <span class="swatch" style="background:#b2182b"></span> warming
-      <span class="swatch" style="background:#d9d9d9"></span> not significant
-      <span class="swatch" style="background:#f4f7fa;border:1px solid #ccc"></span> no data
-    </p>
+
+    <div class="controls">
+      <div class="chip-row" role="group" aria-label="Quick-pick region">
+        <button type="button" class="chip" data-region="lahore">Lahore</button>
+        <button type="button" class="chip" data-region="reykjavik">Reykjavik</button>
+        <button type="button" class="chip" data-region="global">Global</button>
+      </div>
+      <label>Region
+        <select id="region">
+          {% for rid, r in regions.items() %}
+          <option value="{{ rid }}">{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Variable
+        <select id="variable">
+          {% for vid, v in variables.items() %}
+          <option value="{{ vid }}">{{ v.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <div class="chart-box" id="series-box">
+      <div class="loading-overlay" id="series-loading"><span class="spinner"></span> Loading series…</div>
+      <canvas id="chart"></canvas>
+    </div>
+
+    <section id="verdict" class="verdict">Loading…</section>
+
+    <div class="details">
+      <p id="meta"></p>
+      <p id="note" class="note"></p>
+    </div>
   </section>
 
-  <section id="cell-panel" class="cell-box" hidden>
-    <h2 id="cell-title">Cell</h2>
+  <!-- ============ Global trend map (centrepiece) ============ -->
+  <section class="card map-card">
+    <div class="card-head">
+      <h2>The whole planet, one honest test per cell</h2>
+      <p class="card-sub">Every cell is one Mann-Kendall trend test. Coloured cells
+      passed the Benjamini-Hochberg check — a coloured cell is one you can
+      trust. Grey cells were tested but are not significant; blank areas have
+      too little data. <strong>Click any cell to see its time series.</strong></p>
+    </div>
+
+    <div class="map-toolbar">
+      <label>Map variable
+        <select id="map-variable">
+          <option value="temperature">Temperature</option>
+          <option value="precipitation">Precipitation</option>
+        </select>
+      </label>
+      <div class="legend" aria-label="Map legend">
+        <span class="legend-item"><span class="swatch" style="background:#2166ac"></span>Cooling / drier</span>
+        <span class="legend-item"><span class="swatch" style="background:#f7f7f7"></span>No change</span>
+        <span class="legend-item"><span class="swatch" style="background:#b2182b"></span>Warming / wetter</span>
+        <span class="legend-item"><span class="swatch" style="background:#5a6b7d"></span>Not significant</span>
+        <span class="legend-item"><span class="swatch" style="background:transparent;border:1px solid #5a6b7d"></span>No data</span>
+      </div>
+    </div>
+
+    <div class="map-box" id="map-box">
+      <div class="loading-overlay" id="map-loading"><span class="spinner"></span> Loading the planet…</div>
+      <canvas id="map-canvas" width="1200" height="600"></canvas>
+      <div class="map-tooltip" id="map-tooltip" hidden></div>
+    </div>
+    <p id="map-stats" class="map-stats">Loading map…</p>
+  </section>
+
+  <!-- ============ Clicked cell detail ============ -->
+  <section id="cell-panel" class="card cell-box" hidden>
+    <div class="card-head">
+      <h2 id="cell-title">Cell</h2>
+      <p class="card-sub">Time series for the cell you clicked, with the trend line
+      and its 95% confidence band.</p>
+    </div>
+    <div class="cell-chips" id="cell-chips">
+      <div class="mini-stat"><span class="mini-label">Sen's slope</span><span class="mini-value" id="cell-chip-slope">—</span></div>
+      <div class="mini-stat"><span class="mini-label">p-value</span><span class="mini-value" id="cell-chip-p">—</span></div>
+      <div class="mini-stat"><span class="mini-label">q-value (BH)</span><span class="mini-value" id="cell-chip-q">—</span></div>
+      <div class="mini-stat"><span class="mini-label">95% CI / decade</span><span class="mini-value" id="cell-chip-ci">—</span></div>
+    </div>
     <div class="chart-box"><canvas id="cell-chart"></canvas></div>
     <p id="cell-verdict" class="verdict"></p>
     <p id="cell-meta" class="note"></p>
   </section>
 
+  <!-- ============ Summary table ============ -->
+  <section class="card summary">
+    <div class="card-head">
+      <h2>What changed, where, how much</h2>
+      <p class="card-sub">Every region and variable, one line each. The verdict is
+      computed live from the data — nothing here is typed in by hand.</p>
+    </div>
+    <div class="table-wrap">
+      <table id="summary-table">
+        <thead><tr><th>Region</th><th>Variable</th><th>Period</th>
+        <th>Change / decade</th><th>Significant?</th><th>Verdict</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ How the stats work ============ -->
+  <section class="card method">
+    <div class="card-head">
+      <h2>Why you can trust a coloured cell</h2>
+    </div>
+    <div class="method-grid">
+      <article class="method-item">
+        <h3>Mann-Kendall + Sen's slope</h3>
+        <p>Uses only the order of values, and the slope is the median of all
+        pairwise slopes — one odd year cannot fake a trend. Every slope
+        carries a 95% confidence interval.</p>
+      </article>
+      <article class="method-item">
+        <h3>Autocorrelation correction</h3>
+        <p>When one year resembles the last, the data hold less independent
+        information than their length suggests, so the test widens its
+        uncertainty (Hamed &amp; Rao, first 3 lags).</p>
+      </article>
+      <article class="method-item">
+        <h3>False-discovery control</h3>
+        <p>Testing thousands of cells at p &lt; 0.05 flags hundreds by luck
+        alone. Benjamini-Hochberg turns p-values into q-values; a coloured
+        cell has q ≤ 0.05.</p>
+      </article>
+    </div>
+    <p class="callout"><strong>The honest complication:</strong> for Lahore,
+    NASA POWER says no significant warming (−0.061 °C/decade, p = 0.53) while
+    the GISTEMP cell says it <em>is</em> warming (+0.26 °C/decade,
+    p ≈ 1×10⁻⁵) — and all eight neighbouring cells agree. Two real NASA
+    datasets, two different answers for the same city.</p>
+  </section>
+
   <footer>
-    <p>Data: NASA POWER (power.larc.nasa.gov), NASA GISTEMP v4
+    <p><strong>Data:</strong> NASA POWER (power.larc.nasa.gov), NASA GISTEMP v4
     (data.giss.nasa.gov), GPCP v2.3 (psl.noaa.gov). Point trends are
     ordinary least-squares regressions with a two-sided p-value. Map
     trends are Mann-Kendall tests with Sen's slope, a Hamed-Rao
@@ -93,57 +204,73 @@
     false-discovery control at 5%. “Significant” means p &lt; 0.05 for a
     point series and q ≤ 0.05 for a map cell. No data is invented — the
     app serves the cached downloads in <code>data/</code>.</p>
-    <p>AI disclosure: this starter was built with AI assistance (Muse).</p>
+    <p>AI disclosure: this starter was built with AI assistance (Muse).
+    Team Overthinkers · NASA Space Apps Challenge 2026.</p>
   </footer>
 </main>
 
 <script>
+// Dark-theme defaults for Chart.js (the page is dark; charts must be readable).
+Chart.defaults.color = '#a9bdd4';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+
 let chart = null;
 const regionSel = document.getElementById('region');
 const variableSel = document.getElementById('variable');
 
+function setSeriesLoading(on) {
+  document.getElementById('series-loading').style.display = on ? 'flex' : 'none';
+}
+
 async function loadSeries() {
   const region = regionSel.value;
   const variable = variableSel.value;
-  const res = await fetch(`/api/series?region=${region}&variable=${variable}`);
-  const d = await res.json();
-  if (d.error) {
-    document.getElementById('verdict').textContent = 'Error: ' + d.error;
-    return;
-  }
-  const ctx = document.getElementById('chart');
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: d.years,
-      datasets: [{
-        label: `${d.variable} — ${d.region} (${d.unit})`,
-        data: d.values,
-        borderColor: '#0b5fa5',
-        backgroundColor: 'rgba(11,95,165,0.08)',
-        pointRadius: 2,
-        tension: 0.1,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: true } },
-      scales: {
-        x: { title: { display: true, text: 'Year' } },
-        y: { title: { display: true, text: d.variable + ' (' + d.unit + ')' } }
-      }
+  setSeriesLoading(true);
+  try {
+    const res = await fetch(`/api/series?region=${region}&variable=${variable}`);
+    const d = await res.json();
+    if (d.error) {
+      document.getElementById('verdict').textContent = 'Error: ' + d.error;
+      return;
     }
-  });
-  const v = document.getElementById('verdict');
-  v.textContent = d.verdict;
-  v.className = 'verdict ' + (d.trend.significant ? 'sig' : 'nosig');
-  document.getElementById('meta').textContent =
-    `${d.region} · ${d.variable} · ${d.trend.start_year}–${d.trend.end_year} · ` +
-    `n = ${d.trend.n} · slope ${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade ` +
-    `· p = ${d.trend.p_value === null ? 'n/a' : d.trend.p_value.toExponential(2)} ` +
-    `· r = ${d.trend.r.toFixed(2)} · Source: ${d.source}`;
-  document.getElementById('note').textContent = d.note;
+    const ctx = document.getElementById('chart');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: d.years,
+        datasets: [{
+          label: `${d.variable} — ${d.region} (${d.unit})`,
+          data: d.values,
+          borderColor: '#38bdf8',
+          backgroundColor: 'rgba(56,189,248,0.10)',
+          pointRadius: 2,
+          pointBackgroundColor: '#38bdf8',
+          tension: 0.1,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true, labels: { color: '#dce8f5' } } },
+        scales: {
+          x: { title: { display: true, text: 'Year', color: '#a9bdd4' } },
+          y: { title: { display: true, text: d.variable + ' (' + d.unit + ')', color: '#a9bdd4' } }
+        }
+      }
+    });
+    const v = document.getElementById('verdict');
+    v.textContent = d.verdict;
+    v.className = 'verdict ' + (d.trend.significant ? 'sig' : 'nosig');
+    document.getElementById('meta').textContent =
+      `${d.region} · ${d.variable} · ${d.trend.start_year}–${d.trend.end_year} · ` +
+      `n = ${d.trend.n} · slope ${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade ` +
+      `· p = ${d.trend.p_value === null ? 'n/a' : d.trend.p_value.toExponential(2)} ` +
+      `· r = ${d.trend.r.toFixed(2)} · Source: ${d.source}`;
+    document.getElementById('note').textContent = d.note;
+  } finally {
+    setSeriesLoading(false);
+  }
 }
 
 async function loadSummary() {
@@ -152,8 +279,8 @@ async function loadSummary() {
   const tbody = document.querySelector('#summary-table tbody');
   tbody.innerHTML = rows.map(r => `<tr>
     <td>${r.region}</td><td>${r.variable}</td><td>${r.years}</td>
-    <td>${r.slope_per_decade >= 0 ? '+' : ''}${r.slope_per_decade.toFixed(3)} ${r.unit}/decade</td>
-    <td>${r.significant ? 'Yes' : 'No'}</td>
+    <td class="num">${r.slope_per_decade >= 0 ? '+' : ''}${r.slope_per_decade.toFixed(3)} ${r.unit}/decade</td>
+    <td><span class="badge ${r.significant ? 'sig' : 'nosig'}">${r.significant ? 'Significant' : 'Not significant'}</span></td>
     <td>${r.verdict}</td></tr>`).join('');
 }
 
@@ -166,9 +293,25 @@ function syncVariables() {
   if (globalOnly) variableSel.value = 'temperature';
 }
 
-regionSel.addEventListener('change', () => { syncVariables(); loadSeries(); });
+// Quick-pick region chips (they drive the same select + change event).
+document.querySelectorAll('.chip[data-region]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    regionSel.value = chip.dataset.region;
+    syncVariables();
+    loadSeries();
+    document.querySelectorAll('.chip[data-region]').forEach(c =>
+      c.classList.toggle('active', c === chip));
+  });
+});
+function syncChips() {
+  document.querySelectorAll('.chip[data-region]').forEach(c =>
+    c.classList.toggle('active', c.dataset.region === regionSel.value));
+}
+
+regionSel.addEventListener('change', () => { syncVariables(); syncChips(); loadSeries(); });
 variableSel.addEventListener('change', loadSeries);
 syncVariables();
+syncChips();
 loadSeries();
 loadSummary();
 
@@ -176,8 +319,10 @@ loadSummary();
 const mapCanvas = document.getElementById('map-canvas');
 const mapCtx = mapCanvas.getContext('2d');
 const mapVarSel = document.getElementById('map-variable');
+const mapTooltip = document.getElementById('map-tooltip');
 let mapData = null;
 let cellChart = null;
+let selectedCell = null;  // {i, j} of the last clicked cell, drawn outlined
 
 function slopeColor(slope, maxAbs) {
   // Diverging blue-white-red, zero = white.
@@ -212,9 +357,15 @@ function drawMap() {
       const s = mapData.slope_per_decade[i][j];
       if (s === null || s === undefined) continue;  // no data: leave blank
       mapCtx.fillStyle = mapData.significant[i][j]
-        ? slopeColor(s, maxAbs) : '#d9d9d9';
+        ? slopeColor(s, maxAbs) : '#5a6b7d';
       mapCtx.fillRect(j * cw, i * ch, cw + 0.5, ch + 0.5);
     }
+  }
+  // Outline the last clicked cell so the user can see what they picked.
+  if (selectedCell) {
+    mapCtx.strokeStyle = '#fbbf24';
+    mapCtx.lineWidth = 3;
+    mapCtx.strokeRect(selectedCell.j * cw + 1, selectedCell.i * ch + 1, cw - 1, ch - 1);
   }
   let tested = 0, sig = 0;
   for (let i = 0; i < nLat; i++) {
@@ -229,25 +380,73 @@ function drawMap() {
     `after Benjamini-Hochberg (q ≤ 0.05) · colour scale ±${maxAbs.toFixed(2)} ${mapData.unit}/decade`;
 }
 
-async function loadMap() {
-  document.getElementById('map-stats').textContent = 'Loading map…';
-  const res = await fetch(`/api/map?variable=${mapVarSel.value}`);
-  mapData = await res.json();
-  if (mapData.error) {
-    document.getElementById('map-stats').textContent = 'Error: ' + mapData.error;
-    return;
-  }
-  drawMap();
+function fmtLatLon(lat, lon) {
+  const la = `${Math.abs(lat)}°${lat >= 0 ? 'N' : 'S'}`;
+  const lo = `${Math.abs(lon)}°${lon >= 0 ? 'E' : 'W'}`;
+  return `${la}, ${lo}`;
 }
 
-function canvasLatLon(evt) {
+function cellAt(evt) {
   const rect = mapCanvas.getBoundingClientRect();
   const x = (evt.clientX - rect.left) * mapCanvas.width / rect.width;
   const y = (evt.clientY - rect.top) * mapCanvas.height / rect.height;
   const nLat = mapData.lat.length, nLon = mapData.lon.length;
-  const j = Math.min(nLon - 1, Math.floor(x / (mapCanvas.width / nLon)));
-  const i = Math.min(nLat - 1, Math.floor(y / (mapCanvas.height / nLat)));
-  return { lat: mapData.lat[i], lon: mapData.lon[j] };
+  const j = Math.min(nLon - 1, Math.max(0, Math.floor(x / (mapCanvas.width / nLon))));
+  const i = Math.min(nLat - 1, Math.max(0, Math.floor(y / (mapCanvas.height / nLat))));
+  return { i, j, lat: mapData.lat[i], lon: mapData.lon[j] };
+}
+
+function showTooltip(evt) {
+  if (!mapData) return;
+  const { i, j, lat, lon } = cellAt(evt);
+  const s = mapData.slope_per_decade[i][j];
+  const box = document.getElementById('map-box');
+  const rect = box.getBoundingClientRect();
+  let html;
+  if (s === null || s === undefined) {
+    html = `<strong>${fmtLatLon(lat, lon)}</strong><br>No data for this cell`;
+  } else {
+    const sig = mapData.significant[i][j];
+    const q = mapData.q_value[i][j];
+    html = `<strong>${fmtLatLon(lat, lon)}</strong><br>` +
+      `${s >= 0 ? '+' : ''}${s.toFixed(2)} ${mapData.unit}/decade<br>` +
+      (sig
+        ? `<span class="tt-sig">Significant · q = ${q !== null ? q.toExponential(1) : 'n/a'}</span>`
+        : `<span class="tt-nosig">Not significant</span>`);
+  }
+  mapTooltip.innerHTML = html;
+  mapTooltip.hidden = false;
+  const x = evt.clientX - rect.left + 14, y = evt.clientY - rect.top + 12;
+  mapTooltip.style.left = Math.min(x, rect.width - 190) + 'px';
+  mapTooltip.style.top = Math.max(6, Math.min(y, rect.height - 70)) + 'px';
+}
+
+function hideTooltip() { mapTooltip.hidden = true; }
+
+async function loadMap() {
+  document.getElementById('map-loading').style.display = 'flex';
+  document.getElementById('map-stats').textContent = 'Loading map…';
+  try {
+    const res = await fetch(`/api/map?variable=${mapVarSel.value}`);
+    mapData = await res.json();
+    if (mapData.error) {
+      document.getElementById('map-stats').textContent = 'Error: ' + mapData.error;
+      return;
+    }
+    selectedCell = null;
+    drawMap();
+  } finally {
+    document.getElementById('map-loading').style.display = 'none';
+  }
+}
+
+function canvasLatLon(evt) {
+  const { lat, lon } = cellAt(evt);
+  return { lat, lon };
+}
+
+function setChip(id, text) {
+  document.getElementById(id).textContent = text;
 }
 
 async function loadCell(lat, lon) {
@@ -270,14 +469,29 @@ async function loadCell(lat, lon) {
       `p = ${d.trend.p_value.toExponential(2)}` +
       (d.trend.q_value !== null && d.trend.q_value !== undefined
         ? ` · q = ${d.trend.q_value.toExponential(2)}` : '') : '');
+  if (d.trend) {
+    const sign = (x) => (x >= 0 ? '+' : '');
+    setChip('cell-chip-slope',
+      `${sign(d.trend.slope_per_decade)}${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade`);
+    setChip('cell-chip-p', d.trend.p_value.toExponential(2));
+    setChip('cell-chip-q', (d.trend.q_value !== null && d.trend.q_value !== undefined)
+      ? d.trend.q_value.toExponential(2) : 'n/a');
+    setChip('cell-chip-ci',
+      `${sign(d.trend.ci_lo_per_decade)}${d.trend.ci_lo_per_decade.toFixed(3)} to ` +
+      `${sign(d.trend.ci_hi_per_decade)}${d.trend.ci_hi_per_decade.toFixed(3)}`);
+  } else {
+    setChip('cell-chip-slope', '—'); setChip('cell-chip-p', '—');
+    setChip('cell-chip-q', '—'); setChip('cell-chip-ci', '—');
+  }
   const ctx = document.getElementById('cell-chart');
   if (cellChart) cellChart.destroy();
   const datasets = [{
     label: `${d.variable} (${d.unit})`,
     data: d.values,
-    borderColor: '#0b5fa5',
-    backgroundColor: 'rgba(11,95,165,0.08)',
+    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(56,189,248,0.10)',
     pointRadius: 2,
+    pointBackgroundColor: '#38bdf8',
     tension: 0.1,
   }];
   if (d.trend) {
@@ -288,7 +502,7 @@ async function loadCell(lat, lon) {
     datasets.push({
       label: 'Trend (Sen’s slope)',
       data: line(slopeYr),
-      borderColor: '#c0392b',
+      borderColor: '#f87171',
       borderDash: [6, 4],
       pointRadius: 0,
       tension: 0,
@@ -296,15 +510,15 @@ async function loadCell(lat, lon) {
     datasets.push({
       label: '95% CI (low)',
       data: line(loYr),
-      borderColor: 'rgba(192,57,43,0.25)',
+      borderColor: 'rgba(248,113,113,0.30)',
       pointRadius: 0,
       tension: 0,
     });
     datasets.push({
       label: '95% CI (high)',
       data: line(hiYr),
-      borderColor: 'rgba(192,57,43,0.25)',
-      backgroundColor: 'rgba(192,57,43,0.12)',
+      borderColor: 'rgba(248,113,113,0.30)',
+      backgroundColor: 'rgba(248,113,113,0.14)',
       fill: '-1',
       pointRadius: 0,
       tension: 0,
@@ -315,10 +529,10 @@ async function loadCell(lat, lon) {
     data: { labels: d.years, datasets },
     options: {
       responsive: true,
-      plugins: { legend: { display: true } },
+      plugins: { legend: { display: true, labels: { color: '#dce8f5' } } },
       scales: {
-        x: { title: { display: true, text: 'Year' } },
-        y: { title: { display: true, text: d.variable + ' (' + d.unit + ')' } }
+        x: { title: { display: true, text: 'Year', color: '#a9bdd4' } },
+        y: { title: { display: true, text: d.variable + ' (' + d.unit + ')', color: '#a9bdd4' } }
       }
     }
   });
@@ -327,9 +541,13 @@ async function loadCell(lat, lon) {
 
 mapCanvas.addEventListener('click', (evt) => {
   if (!mapData) return;
-  const { lat, lon } = canvasLatLon(evt);
+  const { i, j, lat, lon } = cellAt(evt);
+  selectedCell = { i, j };
+  drawMap();
   loadCell(lat, lon);
 });
+mapCanvas.addEventListener('mousemove', showTooltip);
+mapCanvas.addEventListener('mouseleave', hideTooltip);
 mapVarSel.addEventListener('change', loadMap);
 loadMap();
 </script>
