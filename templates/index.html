@@ -6,58 +6,184 @@
 <title>Trend Detective — NASA Space Apps 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="{{ url_for('static', filename='logo.svg') }}" type="image/svg+xml">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
-<header class="hero">
-  <div class="hero-inner">
-    <div class="badges">
-      <span class="pill pill-nasa">NASA SPACE APPS 2026</span>
-      <span class="pill">Team Overthinkers</span>
-      <span class="pill pill-challenge">Challenge: Be An Earth System Trend Detective!</span>
+<!-- ============ Masthead ============ -->
+<header class="masthead">
+  <div class="mast-inner">
+    <div class="brand">
+      <img class="brand-logo" src="{{ url_for('static', filename='logo.svg') }}" alt="Overthinkers logo" height="40">
+      <div class="brand-text">
+        <p class="eyebrow">NASA Space Apps 2026 &middot; Team Overthinkers</p>
+        <h1>Trend Detective</h1>
+      </div>
     </div>
-    <h1>Trend Detective</h1>
-    <p class="pitch">What is changing, where, how much — and is it real?</p>
-    <p class="sub">One honest statistical test for every place on Earth, built on
-    real NASA data. Pick a region, a variable, or any cell on the map —
-    the app shows the trend, the numbers, and whether you can trust them.</p>
-
-    <div class="stats">
-      <article class="stat">
-        <div class="stat-value warm">+0.212 <span>°C / decade</span></div>
-        <div class="stat-label">Global warming, 1981–2025</div>
-        <div class="stat-badge sig">Significant · p ≈ 6×10⁻²¹</div>
-      </article>
-      <article class="stat">
-        <div class="stat-value warm">+0.194 <span>°C / decade</span></div>
-        <div class="stat-label">Reykjavik warming, 1981–2024</div>
-        <div class="stat-badge sig">Significant · p = 0.0009</div>
-      </article>
-      <article class="stat">
-        <div class="stat-value warn">Two answers</div>
-        <div class="stat-label">Lahore: POWER says no trend (−0.061 °C/decade),
-        GISTEMP says warming (+0.26 °C/decade)</div>
-        <div class="stat-badge flag">Dataset disagreement</div>
-      </article>
-      <article class="stat">
-        <div class="stat-value wet">+0.153 <span>mm/day / decade</span></div>
-        <div class="stat-label">Lahore rainfall, 1981–2024</div>
-        <div class="stat-badge sig">Significant · p = 0.016</div>
-      </article>
+    <div class="mast-right">
+      <p class="mast-challenge">Challenge: Be An Earth System Trend Detective!</p>
+      <p class="mast-data">Data: GISTEMP v4 &middot; GPCP v2.3 &middot; NASA POWER</p>
     </div>
   </div>
 </header>
 
 <main>
+  <!-- ============ Strapline + key findings ============ -->
+  <section class="intro" aria-label="What this tool does">
+    <div class="intro-text">
+      <h2>What is changing, where, how much &mdash; and is it real?</h2>
+      <p>One honest statistical test for every place on Earth, from real NASA
+      data. Pick a region, a variable, or any cell on the map &mdash; the tool
+      shows the trend, the numbers, and whether you can trust them.</p>
+    </div>
+    <figure class="earth-figure">
+      <img src="https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001386/GSFC_20171208_Archive_e001386~large.jpg"
+           alt="Earth seen from space, the Blue Marble 2012: North and Central America under swirling cloud"
+           onerror="this.closest('figure').style.display='none'">
+      <figcaption>Earth &mdash; NASA Blue Marble 2012 (Suomi NPP / VIIRS)</figcaption>
+    </figure>
+  </section>
+
+  <section class="findings" aria-label="Key findings">
+    <div class="fact">
+      <div class="fact-num"><span data-count="0.212" data-decimals="3" data-prefix="+">+0.212</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-label">Global warming, 1981&ndash;2025</div>
+      <div class="fact-note">Significant &middot; p &asymp; 6&times;10<sup>&minus;21</sup></div>
+    </div>
+    <div class="fact">
+      <div class="fact-num"><span data-count="0.194" data-decimals="3" data-prefix="+">+0.194</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-label">Reykjavik warming, 1981&ndash;2024</div>
+      <div class="fact-note">Significant &middot; p = 0.0009</div>
+    </div>
+    <div class="fact fact-disagree">
+      <div class="fact-num fact-num-small"><span data-count="-0.061" data-decimals="3">-0.061</span> vs <span data-count="0.26" data-decimals="2" data-prefix="+">+0.26</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-label">Lahore temperature: two datasets, two answers</div>
+      <div class="fact-note">POWER: no trend (p = 0.53) &middot; GISTEMP cell: warming (p &asymp; 1&times;10<sup>&minus;5</sup>)</div>
+    </div>
+    <div class="fact">
+      <div class="fact-num"><span data-count="0.153" data-decimals="3" data-prefix="+">+0.153</span> <span class="fact-unit">mm/day / decade</span></div>
+      <div class="fact-label">Lahore rainfall, 1981&ndash;2024</div>
+      <div class="fact-note">Significant &middot; p = 0.016</div>
+    </div>
+  </section>
+
+  <!-- ============ Global trend map ============ -->
+  <section class="map-section" aria-label="Global trend map">
+    <div class="section-head">
+      <h2>Global trend map</h2>
+      <p>Every cell is one Mann-Kendall trend test. Coloured cells passed the
+      Benjamini-Hochberg check &mdash; a coloured cell is one you can trust.
+      Grey cells were tested but are not significant; blank areas have too
+      little data. <strong>Click any cell to inspect it.</strong></p>
+    </div>
+
+    <div class="map-toolbar">
+      <label class="toolbar-label">Map variable
+        <select id="map-variable">
+          <option value="temperature">Temperature</option>
+          <option value="precipitation">Precipitation</option>
+        </select>
+      </label>
+      <div class="presets" role="group" aria-label="Guided stories">
+        <span class="presets-label">Guided stories:</span>
+        <button type="button" class="preset" id="preset-warming">Fastest warming</button>
+        <button type="button" class="preset" id="preset-wetting">Fastest wetting</button>
+        <button type="button" class="preset" id="preset-lahore">The Lahore disagreement</button>
+      </div>
+      <p class="preset-note" id="preset-note" role="status"></p>
+    </div>
+
+    <div class="work-grid">
+      <div class="map-col">
+        <div class="map-box" id="map-box">
+          <div id="leaflet-map" aria-label="World map of per-cell climate trends"></div>
+          <canvas id="map-canvas" width="720" height="360" hidden></canvas>
+          <div class="map-tooltip" id="map-tooltip" hidden></div>
+          <div class="loading-overlay" id="map-loading"><span class="spinner" aria-hidden="true"></span><span id="map-loading-text">Fetching trend map&hellip;</span></div>
+        </div>
+        <div class="legend" aria-label="Map legend">
+          <span class="legend-title">Trend per decade, significant cells only (q &le; 0.05)</span>
+          <span class="legend-item"><span class="swatch" style="background:#2166ac"></span>Cooling / drier</span>
+          <span class="legend-item"><span class="swatch" style="background:#f7f7f7"></span>No change</span>
+          <span class="legend-item"><span class="swatch" style="background:#b2182b"></span>Warming / wetter</span>
+          <span class="legend-item"><span class="swatch" style="background:#8a97a5"></span>Tested, not significant</span>
+          <span class="legend-item"><span class="swatch" style="background:transparent;border:1px solid #8a97a5"></span>No data</span>
+        </div>
+        <p id="map-stats" class="map-stats" role="status">Loading map&hellip;</p>
+      </div>
+
+      <!-- ============ Cell inspector ============ -->
+      <aside class="inspector">
+        <section id="cell-panel" class="card cell-box" aria-label="Selected cell">
+          <div class="card-head">
+            <h2 id="cell-title">Inspect a cell</h2>
+            <p class="card-sub">Click any cell on the map, or start from a
+            guided story above. The series, trend line and 95% confidence
+            band come from the real gridded data.</p>
+          </div>
+          <div id="cell-empty" class="cell-empty">
+            <p><strong>No cell selected yet.</strong></p>
+            <p>Try <button type="button" class="text-button" id="empty-lahore">Lahore (31&deg;N, 75&deg;E)</button>,
+            or <button type="button" class="text-button" id="empty-fastest">the fastest-warming cell on Earth</button>.</p>
+          </div>
+          <div id="cell-content" hidden>
+            <figure class="story-photo" id="story-photo" hidden>
+              <img id="story-photo-img" src="" alt="" loading="lazy"
+                   onerror="this.closest('figure').style.display='none'">
+              <figcaption id="story-photo-caption"></figcaption>
+            </figure>
+            <dl class="cell-stats">
+              <div class="cell-stat"><dt>Sen&rsquo;s slope</dt><dd id="cell-chip-slope">&mdash;</dd></div>
+              <div class="cell-stat"><dt>p-value</dt><dd id="cell-chip-p">&mdash;</dd></div>
+              <div class="cell-stat"><dt>q-value (BH)</dt><dd id="cell-chip-q">&mdash;</dd></div>
+              <div class="cell-stat"><dt>95% CI / decade</dt><dd id="cell-chip-ci">&mdash;</dd></div>
+            </dl>
+            <div class="chart-tools" role="group" aria-label="Zoom the cell chart">
+              <span>Zoom:</span>
+              <button type="button" data-cell-zoom="out" aria-label="Zoom out">&minus;</button>
+              <button type="button" data-cell-zoom="in" aria-label="Zoom in">+</button>
+              <button type="button" data-cell-zoom="reset">Reset</button>
+              <span class="chart-hint">or scroll over the chart</span>
+            </div>
+            <div class="chart-box"><canvas id="cell-chart"></canvas></div>
+            <p id="cell-verdict" class="verdict"></p>
+            <p id="cell-meta" class="note"></p>
+            <p id="lahore-note" class="callout" hidden><strong>The honest complication:</strong>
+            the POWER point series for Lahore says no significant warming
+            (&minus;0.061 &deg;C/decade, p = 0.53), while this GISTEMP cell says it
+            <em>is</em> warming (+0.26 &deg;C/decade, p &asymp; 1&times;10<sup>&minus;5</sup>)
+            &mdash; and all eight neighbouring cells agree. Two real NASA
+            datasets, two different answers for the same city.</p>
+            <div class="compare-controls">
+              <button type="button" class="btn" id="compare-pin">Pin a second cell to compare</button>
+              <button type="button" class="btn btn-quiet" id="compare-clear" hidden>Clear comparison</button>
+              <span class="compare-hint" id="compare-hint" hidden>Now click another cell on the map.</span>
+            </div>
+            <div id="compare-panel" hidden>
+              <h3>Comparison</h3>
+              <table class="compare-table">
+                <thead><tr><th></th><th>Cell</th><th>Slope / decade</th><th>p</th><th>q</th></tr></thead>
+                <tbody id="compare-body"></tbody>
+              </table>
+              <p class="note" id="compare-verdicts"></p>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </section>
+
   <!-- ============ Explore one place ============ -->
   <section class="card explorer">
     <div class="card-head">
       <h2>Explore a place</h2>
-      <p class="card-sub">A real time series from NASA POWER or GISTEMP — with the
-      trend tested, not just drawn.</p>
+      <p class="card-sub">A real time series from NASA POWER or GISTEMP &mdash; with the
+      trend tested, not just drawn. Scroll over the chart to zoom, or use the buttons.</p>
     </div>
 
     <div class="controls">
@@ -82,12 +208,28 @@
       </label>
     </div>
 
+    <figure class="region-photo" id="region-photo">
+      <img id="region-photo-img"
+           src="https://images-assets.nasa.gov/image/iss073e0763605/iss073e0763605~large.jpg"
+           alt="Lahore at night, city lights seen from the International Space Station"
+           loading="lazy"
+           onerror="this.closest('figure').style.display='none'">
+      <figcaption id="region-photo-caption">Lahore at night &mdash; photographed from the International Space Station, 21 September 2025. Photo: NASA.</figcaption>
+    </figure>
+
+    <div class="chart-tools" role="group" aria-label="Zoom the series chart">
+      <span>Zoom:</span>
+      <button type="button" data-series-zoom="out" aria-label="Zoom out">&minus;</button>
+      <button type="button" data-series-zoom="in" aria-label="Zoom in">+</button>
+      <button type="button" data-series-zoom="reset">Reset</button>
+      <span class="chart-hint">or scroll over the chart</span>
+    </div>
     <div class="chart-box" id="series-box">
-      <div class="loading-overlay" id="series-loading"><span class="spinner"></span> Loading series…</div>
+      <div class="loading-overlay" id="series-loading"><span class="spinner" aria-hidden="true"></span><span id="series-loading-text">Fetching series&hellip;</span></div>
       <canvas id="chart"></canvas>
     </div>
 
-    <section id="verdict" class="verdict">Loading…</section>
+    <section id="verdict" class="verdict">Loading&hellip;</section>
 
     <div class="details">
       <p id="meta"></p>
@@ -95,64 +237,14 @@
     </div>
   </section>
 
-  <!-- ============ Global trend map (centrepiece) ============ -->
-  <section class="card map-card">
-    <div class="card-head">
-      <h2>The whole planet, one honest test per cell</h2>
-      <p class="card-sub">Every cell is one Mann-Kendall trend test. Coloured cells
-      passed the Benjamini-Hochberg check — a coloured cell is one you can
-      trust. Grey cells were tested but are not significant; blank areas have
-      too little data. <strong>Click any cell to see its time series.</strong></p>
-    </div>
-
-    <div class="map-toolbar">
-      <label>Map variable
-        <select id="map-variable">
-          <option value="temperature">Temperature</option>
-          <option value="precipitation">Precipitation</option>
-        </select>
-      </label>
-      <div class="legend" aria-label="Map legend">
-        <span class="legend-item"><span class="swatch" style="background:#2166ac"></span>Cooling / drier</span>
-        <span class="legend-item"><span class="swatch" style="background:#f7f7f7"></span>No change</span>
-        <span class="legend-item"><span class="swatch" style="background:#b2182b"></span>Warming / wetter</span>
-        <span class="legend-item"><span class="swatch" style="background:#5a6b7d"></span>Not significant</span>
-        <span class="legend-item"><span class="swatch" style="background:transparent;border:1px solid #5a6b7d"></span>No data</span>
-      </div>
-    </div>
-
-    <div class="map-box" id="map-box">
-      <div class="loading-overlay" id="map-loading"><span class="spinner"></span> Loading the planet…</div>
-      <canvas id="map-canvas" width="1200" height="600"></canvas>
-      <div class="map-tooltip" id="map-tooltip" hidden></div>
-    </div>
-    <p id="map-stats" class="map-stats">Loading map…</p>
-  </section>
-
-  <!-- ============ Clicked cell detail ============ -->
-  <section id="cell-panel" class="card cell-box" hidden>
-    <div class="card-head">
-      <h2 id="cell-title">Cell</h2>
-      <p class="card-sub">Time series for the cell you clicked, with the trend line
-      and its 95% confidence band.</p>
-    </div>
-    <div class="cell-chips" id="cell-chips">
-      <div class="mini-stat"><span class="mini-label">Sen's slope</span><span class="mini-value" id="cell-chip-slope">—</span></div>
-      <div class="mini-stat"><span class="mini-label">p-value</span><span class="mini-value" id="cell-chip-p">—</span></div>
-      <div class="mini-stat"><span class="mini-label">q-value (BH)</span><span class="mini-value" id="cell-chip-q">—</span></div>
-      <div class="mini-stat"><span class="mini-label">95% CI / decade</span><span class="mini-value" id="cell-chip-ci">—</span></div>
-    </div>
-    <div class="chart-box"><canvas id="cell-chart"></canvas></div>
-    <p id="cell-verdict" class="verdict"></p>
-    <p id="cell-meta" class="note"></p>
-  </section>
-
   <!-- ============ Summary table ============ -->
   <section class="card summary">
     <div class="card-head">
       <h2>What changed, where, how much</h2>
       <p class="card-sub">Every region and variable, one line each. The verdict is
-      computed live from the data — nothing here is typed in by hand.</p>
+      computed live from the data &mdash; nothing here is typed in by hand.
+      Click a city row to fly the map to that cell; click the Global row to
+      load its series above.</p>
     </div>
     <div class="table-wrap">
       <table id="summary-table">
@@ -164,15 +256,15 @@
   </section>
 
   <!-- ============ How the stats work ============ -->
-  <section class="card method">
-    <div class="card-head">
+  <section class="method">
+    <div class="section-head">
       <h2>Why you can trust a coloured cell</h2>
     </div>
     <div class="method-grid">
       <article class="method-item">
-        <h3>Mann-Kendall + Sen's slope</h3>
+        <h3>Mann-Kendall + Sen&rsquo;s slope</h3>
         <p>Uses only the order of values, and the slope is the median of all
-        pairwise slopes — one odd year cannot fake a trend. Every slope
+        pairwise slopes &mdash; one odd year cannot fake a trend. Every slope
         carries a 95% confidence interval.</p>
       </article>
       <article class="method-item">
@@ -185,164 +277,470 @@
         <h3>False-discovery control</h3>
         <p>Testing thousands of cells at p &lt; 0.05 flags hundreds by luck
         alone. Benjamini-Hochberg turns p-values into q-values; a coloured
-        cell has q ≤ 0.05.</p>
+        cell has q &le; 0.05.</p>
       </article>
     </div>
     <p class="callout"><strong>The honest complication:</strong> for Lahore,
-    NASA POWER says no significant warming (−0.061 °C/decade, p = 0.53) while
-    the GISTEMP cell says it <em>is</em> warming (+0.26 °C/decade,
-    p ≈ 1×10⁻⁵) — and all eight neighbouring cells agree. Two real NASA
+    NASA POWER says no significant warming (&minus;0.061 &deg;C/decade, p = 0.53) while
+    the GISTEMP cell says it <em>is</em> warming (+0.26 &deg;C/decade,
+    p &asymp; 1&times;10<sup>&minus;5</sup>) &mdash; and all eight neighbouring cells agree. Two real NASA
     datasets, two different answers for the same city.</p>
+  </section>
+
+  <!-- ============ About ============ -->
+  <section class="about" aria-label="About Trend Detective">
+    <div class="section-head">
+      <h2>About Trend Detective</h2>
+    </div>
+    <div class="about-grid">
+      <article class="about-item">
+        <h3>What it is</h3>
+        <p>Trend Detective was built for NASA Space Apps 2026, for the
+        challenge <strong>&ldquo;Be An Earth System Trend Detective!&rdquo;</strong>
+        It answers one question for every place on Earth: <strong>what is
+        changing, where, how much &mdash; and is it significant?</strong>
+        Pick a region or a cell on the map and it tests the trend in the
+        data, instead of just drawing a line and letting the eye decide.</p>
+      </article>
+      <article class="about-item">
+        <h3>How it works</h3>
+        <p>Everything comes from real NASA data, cached in the project
+        &mdash; nothing is invented:</p>
+        <ul>
+          <li><a href="https://power.larc.nasa.gov/">NASA POWER</a> &mdash;
+          point series for Lahore and Reykjavik, 1981&ndash;2024.</li>
+          <li><a href="https://data.giss.nasa.gov/gistemp/">NASA GISTEMP v4</a>
+          gridded &mdash; 2&deg; temperature anomaly maps, 1880&ndash;2026.</li>
+          <li><a href="https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc">GPCP v2.3</a>
+          &mdash; 2.5&deg; precipitation maps, 1979&ndash;2026.</li>
+        </ul>
+        <p>Each map cell gets a <strong>Mann-Kendall test</strong> with
+        <strong>Sen&rsquo;s slope</strong> (the median of all pairwise slopes, so one
+        odd year cannot fake a trend), a <strong>Hamed-Rao autocorrelation
+        correction</strong> (first 3 lags), and <strong>Benjamini-Hochberg
+        false-discovery control</strong> &mdash; a coloured cell has
+        q &le; 0.05.</p>
+      </article>
+      <article class="about-item">
+        <h3>What it found</h3>
+        <p>The planet is warming at <strong>+0.212 &deg;C per decade</strong>
+        since 1981, and Reykjavik at almost exactly the same rate
+        (+0.194 &deg;C/decade). On the map, <strong>6,170 of 7,949 tested
+        temperature cells are significant</strong> &mdash; 6,084 warming,
+        only 86 cooling. Lahore&rsquo;s rain is significantly up
+        (+0.153 mm/day/decade).</p>
+        <p>The honest complication: for Lahore, NASA POWER says no
+        significant warming (&minus;0.061 &deg;C/decade, p = 0.53) while the
+        GISTEMP cell says it <em>is</em> warming (+0.26 &deg;C/decade,
+        p &asymp; 1&times;10<sup>&minus;5</sup>). Two real NASA datasets, two
+        different answers for the same city.</p>
+      </article>
+      <article class="about-item">
+        <h3>Team &amp; disclosure</h3>
+        <p>Team <strong>Overthinkers</strong> is a solo project by
+        <strong>Usman Wajid</strong>, Computer Science student at
+        FAST-NUCES, Lahore, built for the NASA Space Apps
+        <strong>Virtual Universal Event, 14&ndash;15 November 2026</strong>.</p>
+        <p>AI disclosure: the project was built with <strong>Muse (Meta AI
+        assistant)</strong>, used for ideation and brainstorming, research
+        and information gathering, data analysis and interpretation, coding
+        and debugging, and writing and editing. All data is real NASA data;
+        no numbers were invented.</p>
+      </article>
+    </div>
+    <div class="about-team">
+      <img class="about-logo" src="{{ url_for('static', filename='logo.svg') }}" alt="Overthinkers logo">
+      <p><strong>Team Overthinkers</strong> &mdash; Usman Wajid, FAST-NUCES Lahore &middot;
+      NASA Space Apps Challenge 2026 &middot; Virtual Universal Event</p>
+    </div>
   </section>
 
   <footer>
     <p><strong>Data:</strong> NASA POWER (power.larc.nasa.gov), NASA GISTEMP v4
     (data.giss.nasa.gov), GPCP v2.3 (psl.noaa.gov). Point trends are
     ordinary least-squares regressions with a two-sided p-value. Map
-    trends are Mann-Kendall tests with Sen's slope, a Hamed-Rao
+    trends are Mann-Kendall tests with Sen&rsquo;s slope, a Hamed-Rao
     autocorrelation correction (first 3 lags), and Benjamini-Hochberg
-    false-discovery control at 5%. “Significant” means p &lt; 0.05 for a
-    point series and q ≤ 0.05 for a map cell. No data is invented — the
-    app serves the cached downloads in <code>data/</code>.</p>
+    false-discovery control at 5%. &ldquo;Significant&rdquo; means p &lt; 0.05 for a
+    point series and q &le; 0.05 for a map cell. No data is invented &mdash; the
+    app serves the cached downloads in <code>data/</code>. Basemap &copy;
+    OpenStreetMap contributors &copy; CARTO.</p>
     <p>AI disclosure: this starter was built with AI assistance (Muse).
-    Team Overthinkers · NASA Space Apps Challenge 2026.</p>
+    Team Overthinkers &middot; NASA Space Apps Challenge 2026.</p>
   </footer>
 </main>
 
 <script>
-// Dark-theme defaults for Chart.js (the page is dark; charts must be readable).
-Chart.defaults.color = '#a9bdd4';
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+/* Trend Detective front-end.
+   Data comes only from /api/series, /api/summary, /api/map, /api/cell.
+   The map is Leaflet over a CartoDB Positron basemap; the trend grid is
+   painted onto #map-canvas and shown as a Leaflet imageOverlay, so it
+   stays aligned while panning and zooming. */
+const $ = (id) => document.getElementById(id);
+const CHART_OK = typeof Chart !== 'undefined';
+const LEAFLET_OK = typeof L !== 'undefined';
 
-let chart = null;
-const regionSel = document.getElementById('region');
-const variableSel = document.getElementById('variable');
-
-function setSeriesLoading(on) {
-  document.getElementById('series-loading').style.display = on ? 'flex' : 'none';
+if (CHART_OK) {
+  Chart.defaults.color = '#5b6470';
+  Chart.defaults.font.family = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
+  Chart.defaults.borderColor = 'rgba(22,25,29,0.10)';
 }
 
+function fmtSigned(x, d) {
+  if (x === null || x === undefined || Number.isNaN(x)) return 'n/a';
+  return (x >= 0 ? '+' : '') + x.toFixed(d === undefined ? 3 : d);
+}
+function fmtP(p) {
+  if (p === null || p === undefined) return 'n/a';
+  return p < 0.01 ? p.toExponential(1) : p.toFixed(3);
+}
+function fmtLatLon(lat, lon) {
+  const la = Math.abs(lat) + '\u00B0' + (lat >= 0 ? 'N' : 'S');
+  const lo = Math.abs(lon) + '\u00B0' + (lon >= 0 ? 'E' : 'W');
+  return la + ', ' + lo;
+}
+function normLon(lon) { return ((lon + 180) % 360 + 360) % 360 - 180; }
+
+/* ---------- Animated counters (key-findings strip) ---------- */
+function animateCounters() {
+  document.querySelectorAll('[data-count]').forEach((el) => {
+    const target = parseFloat(el.dataset.count);
+    const decimals = parseInt(el.dataset.decimals || '3', 10);
+    const prefix = el.dataset.prefix || '';
+    const start = performance.now(), dur = 900;
+    function tick(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const v = target * eased;
+      el.textContent = prefix + v.toFixed(decimals);
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = prefix + target.toFixed(decimals);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+/* Keep the final values even if animation is interrupted. */
+document.querySelectorAll('[data-count]').forEach((el) => {
+  el.dataset.final = (el.dataset.prefix || '') +
+    parseFloat(el.dataset.count).toFixed(parseInt(el.dataset.decimals || '3', 10));
+});
+animateCounters();
+
+/* ---------- Zoomable Chart.js charts ---------- */
+function wireZoom(canvas, getChart) {
+  if (!canvas) return;
+  canvas.addEventListener('wheel', (evt) => {
+    const chart = getChart();
+    if (!chart) return;
+    evt.preventDefault();
+    const labels = chart.data.labels || [];
+    const n = labels.length;
+    if (n < 6) return;
+    const x = chart.scales.x;
+    let lo = (x.min === undefined || x.min === null) ? 0 : x.min;
+    let hi = (x.max === undefined || x.max === null) ? n - 1 : x.max;
+    const range = Math.max(5, hi - lo);
+    const factor = evt.deltaY < 0 ? 0.8 : 1.25;
+    const rect = canvas.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (evt.clientX - rect.left) / rect.width));
+    const centre = lo + frac * range;
+    let newRange = Math.max(5, Math.min(n - 1, range * factor));
+    let newLo = centre - (centre - lo) * (newRange / range);
+    let newHi = newLo + newRange;
+    if (newLo < 0) { newHi -= newLo; newLo = 0; }
+    if (newHi > n - 1) { newLo -= newHi - (n - 1); newHi = n - 1; }
+    newLo = Math.max(0, newLo);
+    if (newRange >= n - 1) { newLo = 0; newHi = n - 1; }
+    chart.options.scales.x.min = Math.round(newLo);
+    chart.options.scales.x.max = Math.round(newHi);
+    chart.update('none');
+  }, { passive: false });
+}
+function bindZoomButtons(attrName, getChart) {
+  document.querySelectorAll('button[' + attrName + ']').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const chart = getChart();
+      if (!chart) return;
+      const mode = btn.getAttribute(attrName);
+      const labels = chart.data.labels || [];
+      const n = labels.length;
+      if (mode === 'reset') {
+        delete chart.options.scales.x.min;
+        delete chart.options.scales.x.max;
+        chart.update();
+        return;
+      }
+      const x = chart.scales.x;
+      let lo = (x.min === undefined || x.min === null) ? 0 : x.min;
+      let hi = (x.max === undefined || x.max === null) ? n - 1 : x.max;
+      const range = Math.max(5, hi - lo);
+      const factor = mode === 'in' ? 0.7 : 1.4;
+      const centre = (lo + hi) / 2;
+      let newRange = Math.max(5, Math.min(n - 1, range * factor));
+      let newLo = centre - newRange / 2, newHi = newLo + newRange;
+      if (newLo < 0) { newHi -= newLo; newLo = 0; }
+      if (newHi > n - 1) { newLo -= newHi - (n - 1); newHi = n - 1; }
+      if (newRange >= n - 1) { newLo = 0; newHi = n - 1; }
+      chart.options.scales.x.min = Math.round(newLo);
+      chart.options.scales.x.max = Math.round(newHi);
+      chart.update('none');
+    });
+  });
+}
+function baseChartOptions(yLabel) {
+  return {
+    responsive: true,
+    animation: { duration: 600 },
+    plugins: { legend: { display: true } },
+    scales: {
+      x: { title: { display: true, text: 'Year' } },
+      y: { title: { display: true, text: yLabel } }
+    }
+  };
+}
+function trendLineDatasets(d, colour) {
+  if (!d.trend) return [];
+  const slopeYr = d.trend.slope_per_decade / 10;
+  const loYr = d.trend.ci_lo_per_decade / 10;
+  const hiYr = d.trend.ci_hi_per_decade / 10;
+  const line = (s) => d.years.map((y) => d.trend.median_value + s * (y - d.trend.median_year));
+  return [
+    { label: 'Trend (Sen\u2019s slope)', data: line(slopeYr),
+      borderColor: colour, borderDash: [6, 4], pointRadius: 0, tension: 0 },
+    { label: '95% CI (low)', data: line(loYr),
+      borderColor: 'rgba(178,24,43,0.30)', pointRadius: 0, tension: 0 },
+    { label: '95% CI (high)', data: line(hiYr),
+      borderColor: 'rgba(178,24,43,0.30)',
+      backgroundColor: 'rgba(178,24,43,0.10)', fill: '-1',
+      pointRadius: 0, tension: 0 },
+  ];
+}
+
+/* ---------- Explore a place (point series) ---------- */
+const seriesState = { chart: null };
+const regionSel = $('region');
+const variableSel = $('variable');
+
+function setSeriesLoading(on, text) {
+  $('series-loading').style.display = on ? 'flex' : 'none';
+  if (text) $('series-loading-text').textContent = text;
+}
+function loadSeriesInto(d) {
+  const el = $('verdict');
+  el.textContent = d.verdict;
+  el.className = 'verdict ' + (d.trend.significant ? 'sig' : 'nosig');
+  $('meta').textContent =
+    d.region + ' \u00B7 ' + d.variable + ' \u00B7 ' +
+    d.trend.start_year + '\u2013' + d.trend.end_year + ' \u00B7 ' +
+    'n = ' + d.trend.n + ' \u00B7 slope ' + d.trend.slope_per_decade.toFixed(3) +
+    ' ' + d.unit + '/decade \u00B7 p = ' +
+    (d.trend.p_value === null ? 'n/a' : fmtP(d.trend.p_value)) +
+    ' \u00B7 r = ' + d.trend.r.toFixed(2) + ' \u00B7 Source: ' + d.source;
+  $('note').textContent = d.note;
+}
 async function loadSeries() {
+  if (!CHART_OK) {
+    $('verdict').textContent = 'Charts need the Chart.js library, which failed to load. Check your connection and reload.';
+    return;
+  }
   const region = regionSel.value;
   const variable = variableSel.value;
-  setSeriesLoading(true);
+  setSeriesLoading(true, 'Fetching series \u2014 ' + regionSel.options[regionSel.selectedIndex].text + '\u2026');
   try {
-    const res = await fetch(`/api/series?region=${region}&variable=${variable}`);
+    const res = await fetch('/api/series?region=' + region + '&variable=' + variable);
     const d = await res.json();
     if (d.error) {
-      document.getElementById('verdict').textContent = 'Error: ' + d.error;
+      $('verdict').textContent = 'Error: ' + d.error;
+      $('verdict').className = 'verdict';
       return;
     }
-    const ctx = document.getElementById('chart');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
+    if (seriesState.chart) seriesState.chart.destroy();
+    const datasets = [{
+      label: d.variable + ' \u2014 ' + d.region + ' (' + d.unit + ')',
+      data: d.values,
+      borderColor: '#1d5fa8',
+      backgroundColor: 'rgba(29,95,168,0.08)',
+      pointRadius: 2, pointBackgroundColor: '#1d5fa8',
+      tension: 0.1,
+    }];
+    if (d.trend) {
+      const slopeYr = d.trend.slope_per_decade / 10;
+      /* OLS trend line through the series mean, for the picture only. */
+      const n = d.years.length;
+      const meanX = d.years.reduce((a, b) => a + b, 0) / n;
+      const meanY = d.values.reduce((a, b) => a + b, 0) / n;
+      const line = d.years.map((y) => meanY + slopeYr * (y - meanX));
+      datasets.push({
+        label: 'Trend (OLS)', data: line,
+        borderColor: '#b2182b', borderDash: [6, 4], pointRadius: 0, tension: 0,
+      });
+    }
+    seriesState.chart = new Chart($('chart'), {
       type: 'line',
-      data: {
-        labels: d.years,
-        datasets: [{
-          label: `${d.variable} — ${d.region} (${d.unit})`,
-          data: d.values,
-          borderColor: '#38bdf8',
-          backgroundColor: 'rgba(56,189,248,0.10)',
-          pointRadius: 2,
-          pointBackgroundColor: '#38bdf8',
-          tension: 0.1,
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: true, labels: { color: '#dce8f5' } } },
-        scales: {
-          x: { title: { display: true, text: 'Year', color: '#a9bdd4' } },
-          y: { title: { display: true, text: d.variable + ' (' + d.unit + ')', color: '#a9bdd4' } }
-        }
-      }
+      data: { labels: d.years, datasets },
+      options: baseChartOptions(d.variable + ' (' + d.unit + ')'),
     });
-    const v = document.getElementById('verdict');
-    v.textContent = d.verdict;
-    v.className = 'verdict ' + (d.trend.significant ? 'sig' : 'nosig');
-    document.getElementById('meta').textContent =
-      `${d.region} · ${d.variable} · ${d.trend.start_year}–${d.trend.end_year} · ` +
-      `n = ${d.trend.n} · slope ${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade ` +
-      `· p = ${d.trend.p_value === null ? 'n/a' : d.trend.p_value.toExponential(2)} ` +
-      `· r = ${d.trend.r.toFixed(2)} · Source: ${d.source}`;
-    document.getElementById('note').textContent = d.note;
+    loadSeriesInto(d);
   } finally {
     setSeriesLoading(false);
   }
+  updateRegionPhoto();
 }
 
+/* ---------- Region + story photos (real NASA imagery) ---------- */
+const IMG_BASE = 'https://images-assets.nasa.gov/image/';
+const REGION_PHOTOS = {
+  lahore: {
+    src: IMG_BASE + 'iss073e0763605/iss073e0763605~large.jpg',
+    alt: 'Lahore at night, city lights seen from the International Space Station',
+    caption: 'Lahore at night \u2014 photographed from the International Space Station, 21 September 2025. Photo: NASA.',
+  },
+  reykjavik: {
+    src: IMG_BASE + 'cloud-free-view-of-iceland_17168825861_o/cloud-free-view-of-iceland_17168825861_o~medium.jpg',
+    alt: 'Iceland seen from space, nearly cloud-free and snow-covered',
+    caption: 'Iceland, nearly cloud-free \u2014 NASA Earth Observatory (MODIS / Terra), 15 April 2015. Photo: NASA.',
+  },
+  global: {
+    src: IMG_BASE + 'GSFC_20171208_Archive_e001386/GSFC_20171208_Archive_e001386~large.jpg',
+    alt: 'Earth seen from space, the Blue Marble 2012',
+    caption: 'Earth \u2014 NASA Blue Marble 2012 (Suomi NPP / VIIRS). Photo: NASA.',
+  },
+};
+function updateRegionPhoto() {
+  const photo = REGION_PHOTOS[regionSel.value];
+  if (!photo) return;
+  const fig = $('region-photo');
+  const img = $('region-photo-img');
+  fig.style.display = '';
+  img.src = photo.src;
+  img.alt = photo.alt;
+  $('region-photo-caption').textContent = photo.caption;
+}
+const STORY_PHOTOS = {
+  warming: {
+    src: IMG_BASE + 'GSFC_20171208_Archive_e000643/GSFC_20171208_Archive_e000643~large.jpg',
+    alt: 'Sea ice breaking up in the Greenland Sea, seen from space',
+    caption: 'Sea ice in the Greenland Sea \u2014 NASA Earth Observatory (MODIS / Aqua). Photo: NASA.',
+  },
+  wetting: {
+    src: IMG_BASE + 'iss072e394498/iss072e394498~large.jpg',
+    alt: 'The Caribbean coast of Venezuela seen from the International Space Station',
+    caption: 'The Caribbean coast of Venezuela \u2014 photographed from the International Space Station, 18 December 2024. Photo: NASA.',
+  },
+  lahore: {
+    src: IMG_BASE + 'iss073e0763605/iss073e0763605~large.jpg',
+    alt: 'Lahore at night, city lights seen from the International Space Station',
+    caption: 'Lahore at night \u2014 photographed from the International Space Station, 21 September 2025. Photo: NASA.',
+  },
+};
+function showPresetPhoto(kind) {
+  const photo = STORY_PHOTOS[kind];
+  if (!photo) return;
+  const fig = $('story-photo');
+  const img = $('story-photo-img');
+  fig.hidden = false;
+  fig.style.display = '';
+  img.src = photo.src;
+  img.alt = photo.alt;
+  $('story-photo-caption').textContent = photo.caption;
+}
+function hideStoryPhoto() { $('story-photo').hidden = true; }
+
+/* ---------- Summary table (rows fly the map) ---------- */
+const REGION_CELLS = {
+  'Lahore, Pakistan': [31.52, 74.36],
+  'Reykjavik, Iceland': [64.15, -21.94],
+};
 async function loadSummary() {
   const res = await fetch('/api/summary');
   const rows = await res.json();
   const tbody = document.querySelector('#summary-table tbody');
-  tbody.innerHTML = rows.map(r => `<tr>
-    <td>${r.region}</td><td>${r.variable}</td><td>${r.years}</td>
-    <td class="num">${r.slope_per_decade >= 0 ? '+' : ''}${r.slope_per_decade.toFixed(3)} ${r.unit}/decade</td>
-    <td><span class="badge ${r.significant ? 'sig' : 'nosig'}">${r.significant ? 'Significant' : 'Not significant'}</span></td>
-    <td>${r.verdict}</td></tr>`).join('');
+  tbody.innerHTML = rows.map((r) => {
+    const hasCell = REGION_CELLS[r.region] !== undefined;
+    return '<tr data-region="' + r.region + '" ' + (hasCell ? 'class="row-clickable" title="Click to fly the map to this cell"' : 'title="Global series \u2014 click to load it above"') + '>' +
+    '<td>' + r.region + (hasCell ? ' <span class="row-locate" aria-hidden="true">\u2197 map</span>' : '') + '</td>' +
+    '<td>' + r.variable + '</td><td>' + r.years + '</td>' +
+    '<td class="num">' + fmtSigned(r.slope_per_decade) + ' ' + r.unit + '/decade</td>' +
+    '<td><span class="badge ' + (r.significant ? 'sig' : 'nosig') + '">' +
+      (r.significant ? 'Significant' : 'Not significant') + '</span></td>' +
+    '<td>' + r.verdict + '</td></tr>';
+  }).join('');
+  tbody.querySelectorAll('tr').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      const region = tr.dataset.region;
+      const cell = REGION_CELLS[region];
+      if (cell) {
+        gotoCell(cell[0], cell[1], 'temperature');
+      } else {
+        regionSel.value = 'global';
+        syncVariables(); syncChips(); loadSeries();
+        $('series-box').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  });
 }
 
-// Global has temperature only: keep the variable selector honest.
 function syncVariables() {
   const globalOnly = regionSel.value === 'global';
-  [...variableSel.options].forEach(o => {
+  Array.prototype.forEach.call(variableSel.options, (o) => {
     o.disabled = globalOnly && o.value !== 'temperature';
   });
   if (globalOnly) variableSel.value = 'temperature';
 }
-
-// Quick-pick region chips (they drive the same select + change event).
-document.querySelectorAll('.chip[data-region]').forEach(chip => {
+document.querySelectorAll('.chip[data-region]').forEach((chip) => {
   chip.addEventListener('click', () => {
     regionSel.value = chip.dataset.region;
     syncVariables();
     loadSeries();
-    document.querySelectorAll('.chip[data-region]').forEach(c =>
+    document.querySelectorAll('.chip[data-region]').forEach((c) =>
       c.classList.toggle('active', c === chip));
   });
 });
 function syncChips() {
-  document.querySelectorAll('.chip[data-region]').forEach(c =>
+  document.querySelectorAll('.chip[data-region]').forEach((c) =>
     c.classList.toggle('active', c.dataset.region === regionSel.value));
 }
-
 regionSel.addEventListener('change', () => { syncVariables(); syncChips(); loadSeries(); });
 variableSel.addEventListener('change', loadSeries);
-syncVariables();
-syncChips();
-loadSeries();
-loadSummary();
 
-// ---------- Global trend map ----------
-const mapCanvas = document.getElementById('map-canvas');
+/* ---------- Leaflet map ---------- */
+const mapCanvas = $('map-canvas');
 const mapCtx = mapCanvas.getContext('2d');
-const mapVarSel = document.getElementById('map-variable');
-const mapTooltip = document.getElementById('map-tooltip');
+const mapVarSel = $('map-variable');
+const mapTooltip = $('map-tooltip');
 let mapData = null;
-let cellChart = null;
-let selectedCell = null;  // {i, j} of the last clicked cell, drawn outlined
+let leafletMap = null, overlay = null;
+let primaryMarker = null, compareMarker = null;
+let primaryCell = null;   /* {lat, lon, payload} */
+let compareCell = null;   /* {lat, lon, payload} or null */
+let compareArmed = false;
+const cellState = { chart: null };
+
+const CELL_PX = 4;  /* canvas pixels per grid cell (2x for a 2-degree grid) */
 
 function slopeColor(slope, maxAbs) {
-  // Diverging blue-white-red, zero = white.
   const t = Math.max(-1, Math.min(1, slope / maxAbs));
   if (t >= 0) {
     const g = Math.round(247 - (247 - 24) * t);
     const b = Math.round(247 - (247 - 43) * t);
-    return `rgb(178,${g},${b})`;
+    return 'rgb(178,' + g + ',' + b + ')';
   }
   const g = Math.round(247 - (247 - 102) * -t);
   const b = Math.round(247 - (247 - 172) * -t);
-  return `rgb(${Math.round(178 - (178 - 33) * -t)},${g},${b})`;
+  return 'rgb(' + Math.round(178 - (178 - 33) * -t) + ',' + g + ',' + b + ')';
 }
 
-function drawMap() {
-  if (!mapData) return;
-  const W = mapCanvas.width, H = mapCanvas.height;
+/* Paint the trend grid onto #map-canvas and return a data URL for the
+   Leaflet imageOverlay. The canvas is north-up: lat is ascending in the
+   payload (south first), so row i paints at canvas row (nLat-1-i).
+   Longitudes are normalised to -180..180 first (GPCP ships 0..360). */
+function paintOverlay() {
+  if (!mapData) return null;
   const nLat = mapData.lat.length, nLon = mapData.lon.length;
-  const cw = W / nLon, ch = H / nLat;
-  // Scale from the largest significant |slope| (floor 0.1 so maps never blow up).
+  mapCanvas.width = nLon * CELL_PX;
+  mapCanvas.height = nLat * CELL_PX;
+  const latStep = (mapData.lat[nLat - 1] - mapData.lat[0]) / (nLat - 1);
+  const lonStep = 360 / nLon;
   let maxAbs = 0.1;
   for (let i = 0; i < nLat; i++) {
     for (let j = 0; j < nLon; j++) {
@@ -351,21 +749,18 @@ function drawMap() {
       }
     }
   }
-  mapCtx.clearRect(0, 0, W, H);
+  mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
   for (let i = 0; i < nLat; i++) {
+    const top = 90 - (mapData.lat[i] + latStep / 2);
+    const y = Math.round(top / 180 * mapCanvas.height);
     for (let j = 0; j < nLon; j++) {
       const s = mapData.slope_per_decade[i][j];
-      if (s === null || s === undefined) continue;  // no data: leave blank
-      mapCtx.fillStyle = mapData.significant[i][j]
-        ? slopeColor(s, maxAbs) : '#5a6b7d';
-      mapCtx.fillRect(j * cw, i * ch, cw + 0.5, ch + 0.5);
+      if (s === null || s === undefined) continue;
+      const left = normLon(mapData.lon[j]) - lonStep / 2;
+      const x = Math.round((left + 180) / 360 * mapCanvas.width);
+      mapCtx.fillStyle = mapData.significant[i][j] ? slopeColor(s, maxAbs) : '#8a97a5';
+      mapCtx.fillRect(x, y, CELL_PX + 0.5, CELL_PX + 0.5);
     }
-  }
-  // Outline the last clicked cell so the user can see what they picked.
-  if (selectedCell) {
-    mapCtx.strokeStyle = '#fbbf24';
-    mapCtx.lineWidth = 3;
-    mapCtx.strokeRect(selectedCell.j * cw + 1, selectedCell.i * ch + 1, cw - 1, ch - 1);
   }
   let tested = 0, sig = 0;
   for (let i = 0; i < nLat; i++) {
@@ -374,181 +769,327 @@ function drawMap() {
       if (mapData.significant[i][j]) sig++;
     }
   }
-  document.getElementById('map-stats').textContent =
-    `${mapData.source} · ${mapData.years[0]}–${mapData.years[1]} · ` +
-    `${tested.toLocaleString()} cells tested · ${sig.toLocaleString()} significant ` +
-    `after Benjamini-Hochberg (q ≤ 0.05) · colour scale ±${maxAbs.toFixed(2)} ${mapData.unit}/decade`;
+  $('map-stats').textContent =
+    mapData.source + ' \u00B7 ' + mapData.years[0] + '\u2013' + mapData.years[1] + ' \u00B7 ' +
+    tested.toLocaleString() + ' cells tested \u00B7 ' + sig.toLocaleString() + ' significant ' +
+    'after Benjamini-Hochberg (q \u2264 0.05) \u00B7 colour scale \u00B1' +
+    maxAbs.toFixed(2) + ' ' + mapData.unit + '/decade';
+  return mapCanvas.toDataURL('image/png');
 }
 
-function fmtLatLon(lat, lon) {
-  const la = `${Math.abs(lat)}°${lat >= 0 ? 'N' : 'S'}`;
-  const lo = `${Math.abs(lon)}°${lon >= 0 ? 'E' : 'W'}`;
-  return `${la}, ${lo}`;
+function setMapLoading(on, text) {
+  $('map-loading').style.display = on ? 'flex' : 'none';
+  if (text) $('map-loading-text').textContent = text;
+}
+function initLeaflet() {
+  if (!LEAFLET_OK) {
+    /* No map library: fall back to the plain rendered grid. */
+    mapCanvas.hidden = false;
+    $('map-stats').textContent = 'Interactive map library (Leaflet) failed to load \u2014 showing the static trend grid. Check your connection and reload for the full map.';
+    return;
+  }
+  leafletMap = L.map('leaflet-map', {
+    worldCopyJump: true,
+    minZoom: 2,
+    maxZoom: 8,
+    maxBounds: [[-90, -180], [90, 180]],
+    maxBoundsViscosity: 1.0,
+    zoomControl: true,
+  }).setView([28, 10], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(leafletMap);
+  leafletMap.on('mousemove', onMapMouseMove);
+  leafletMap.on('mouseout', () => { mapTooltip.hidden = true; });
+  leafletMap.on('click', onMapClick);
 }
 
-function cellAt(evt) {
-  const rect = mapCanvas.getBoundingClientRect();
-  const x = (evt.clientX - rect.left) * mapCanvas.width / rect.width;
-  const y = (evt.clientY - rect.top) * mapCanvas.height / rect.height;
-  const nLat = mapData.lat.length, nLon = mapData.lon.length;
-  const j = Math.min(nLon - 1, Math.max(0, Math.floor(x / (mapCanvas.width / nLon))));
-  const i = Math.min(nLat - 1, Math.max(0, Math.floor(y / (mapCanvas.height / nLat))));
-  return { i, j, lat: mapData.lat[i], lon: mapData.lon[j] };
+function nearestCell(lat, lng) {
+  const lats = mapData.lat, lons = mapData.lon;
+  let ilat = 0, best = Infinity;
+  for (let i = 0; i < lats.length; i++) {
+    const d = Math.abs(lats[i] - lat);
+    if (d < best) { best = d; ilat = i; }
+  }
+  const is360 = lons[lons.length - 1] > 180;
+  const probe = is360 ? ((lng + 360) % 360) : normLon(lng);
+  let ilon = 0; best = Infinity;
+  for (let j = 0; j < lons.length; j++) {
+    const d = Math.abs(lons[j] - probe);
+    if (d < best) { best = d; ilon = j; }
+  }
+  return { i: ilat, j: ilon, lat: lats[ilat], lon: normLon(lons[ilon]) };
 }
 
-function showTooltip(evt) {
+function onMapMouseMove(e) {
   if (!mapData) return;
-  const { i, j, lat, lon } = cellAt(evt);
-  const s = mapData.slope_per_decade[i][j];
-  const box = document.getElementById('map-box');
-  const rect = box.getBoundingClientRect();
+  const c = nearestCell(e.latlng.lat, e.latlng.lng);
+  const s = mapData.slope_per_decade[c.i][c.j];
   let html;
   if (s === null || s === undefined) {
-    html = `<strong>${fmtLatLon(lat, lon)}</strong><br>No data for this cell`;
+    html = '<strong>' + fmtLatLon(c.lat, c.lon) + '</strong><br>No data for this cell';
   } else {
-    const sig = mapData.significant[i][j];
-    const q = mapData.q_value[i][j];
-    html = `<strong>${fmtLatLon(lat, lon)}</strong><br>` +
-      `${s >= 0 ? '+' : ''}${s.toFixed(2)} ${mapData.unit}/decade<br>` +
+    const sig = mapData.significant[c.i][c.j];
+    const q = mapData.q_value[c.i][c.j];
+    html = '<strong>' + fmtLatLon(c.lat, c.lon) + '</strong><br>' +
+      fmtSigned(s, 2) + ' ' + mapData.unit + '/decade<br>' +
       (sig
-        ? `<span class="tt-sig">Significant · q = ${q !== null ? q.toExponential(1) : 'n/a'}</span>`
-        : `<span class="tt-nosig">Not significant</span>`);
+        ? '<span class="tt-sig">Significant \u00B7 q = ' + (q !== null ? q.toExponential(1) : 'n/a') + '</span>'
+        : '<span class="tt-nosig">Not significant</span>');
   }
   mapTooltip.innerHTML = html;
   mapTooltip.hidden = false;
-  const x = evt.clientX - rect.left + 14, y = evt.clientY - rect.top + 12;
-  mapTooltip.style.left = Math.min(x, rect.width - 190) + 'px';
-  mapTooltip.style.top = Math.max(6, Math.min(y, rect.height - 70)) + 'px';
+  const pt = leafletMap.latLngToContainerPoint(e.latlng);
+  const box = $('map-box').getBoundingClientRect();
+  const left = Math.max(6, Math.min(pt.x + 14, box.width - 200));
+  const top = Math.max(6, Math.min(pt.y + 12, box.height - 76));
+  mapTooltip.style.left = left + 'px';
+  mapTooltip.style.top = top + 'px';
 }
-
-function hideTooltip() { mapTooltip.hidden = true; }
 
 async function loadMap() {
-  document.getElementById('map-loading').style.display = 'flex';
-  document.getElementById('map-stats').textContent = 'Loading map…';
+  const variable = mapVarSel.value;
+  setMapLoading(true, 'Fetching trend map \u2014 ' + (variable === 'temperature' ? 'GISTEMP v4, 1880\u20132026' : 'GPCP v2.3, 1979\u20132026') + '\u2026');
+  $('map-stats').textContent = 'Loading map\u2026';
   try {
-    const res = await fetch(`/api/map?variable=${mapVarSel.value}`);
+    const res = await fetch('/api/map?variable=' + variable);
     mapData = await res.json();
     if (mapData.error) {
-      document.getElementById('map-stats').textContent = 'Error: ' + mapData.error;
+      $('map-stats').textContent = 'Error: ' + mapData.error;
       return;
     }
-    selectedCell = null;
-    drawMap();
+    const url = paintOverlay();
+    if (leafletMap && url) {
+      if (overlay) overlay.setUrl(url);
+      else {
+        overlay = L.imageOverlay(url, [[-90, -180], [90, 180]], { opacity: 0.88, interactive: false });
+        overlay.addTo(leafletMap);
+      }
+      if (primaryMarker) primaryMarker.addTo(leafletMap);
+      if (compareMarker) compareMarker.addTo(leafletMap);
+    }
   } finally {
-    document.getElementById('map-loading').style.display = 'none';
+    setMapLoading(false);
   }
 }
 
-function canvasLatLon(evt) {
-  const { lat, lon } = cellAt(evt);
-  return { lat, lon };
+function makeMarker(lat, lon, colour) {
+  return L.circleMarker([lat, lon], {
+    radius: 7, color: '#16191d', weight: 2,
+    fillColor: colour, fillOpacity: 1,
+  });
 }
-
-function setChip(id, text) {
-  document.getElementById(id).textContent = text;
-}
-
-async function loadCell(lat, lon) {
-  const res = await fetch(`/api/cell?variable=${mapVarSel.value}&lat=${lat}&lon=${lon}`);
-  const d = await res.json();
-  if (d.error) return;
-  const panel = document.getElementById('cell-panel');
-  panel.hidden = false;
-  document.getElementById('cell-title').textContent =
-    `Cell ${d.cell_lat}°, ${d.cell_lon}° — ${d.variable} (${d.unit})`;
-  const v = document.getElementById('cell-verdict');
-  v.textContent = d.verdict;
-  v.className = 'verdict ' + ((d.trend && d.trend.significant_bh) ? 'sig' : 'nosig');
-  document.getElementById('cell-meta').textContent =
-    `Grid cell centre ${d.cell_lat}°, ${d.cell_lon}° · ${d.years[0]}–${d.years[d.years.length - 1]} · ` +
-    `n = ${d.n} years with data · Source: ${d.source}` +
-    (d.trend ? ` · Sen's slope ${d.trend.slope_per_decade >= 0 ? '+' : ''}${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade ` +
-      `(95% CI ${d.trend.ci_lo_per_decade >= 0 ? '+' : ''}${d.trend.ci_lo_per_decade.toFixed(3)} to ` +
-      `${d.trend.ci_hi_per_decade >= 0 ? '+' : ''}${d.trend.ci_hi_per_decade.toFixed(3)}) · ` +
-      `p = ${d.trend.p_value.toExponential(2)}` +
-      (d.trend.q_value !== null && d.trend.q_value !== undefined
-        ? ` · q = ${d.trend.q_value.toExponential(2)}` : '') : '');
-  if (d.trend) {
-    const sign = (x) => (x >= 0 ? '+' : '');
-    setChip('cell-chip-slope',
-      `${sign(d.trend.slope_per_decade)}${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade`);
-    setChip('cell-chip-p', d.trend.p_value.toExponential(2));
-    setChip('cell-chip-q', (d.trend.q_value !== null && d.trend.q_value !== undefined)
-      ? d.trend.q_value.toExponential(2) : 'n/a');
-    setChip('cell-chip-ci',
-      `${sign(d.trend.ci_lo_per_decade)}${d.trend.ci_lo_per_decade.toFixed(3)} to ` +
-      `${sign(d.trend.ci_hi_per_decade)}${d.trend.ci_hi_per_decade.toFixed(3)}`);
-  } else {
-    setChip('cell-chip-slope', '—'); setChip('cell-chip-p', '—');
-    setChip('cell-chip-q', '—'); setChip('cell-chip-ci', '—');
+function placeMarkers() {
+  if (!leafletMap) return;
+  if (primaryMarker) { leafletMap.removeLayer(primaryMarker); primaryMarker = null; }
+  if (compareMarker) { leafletMap.removeLayer(compareMarker); compareMarker = null; }
+  if (primaryCell) {
+    primaryMarker = makeMarker(primaryCell.lat, primaryCell.lon, '#f2c200');
+    primaryMarker.addTo(leafletMap);
   }
-  const ctx = document.getElementById('cell-chart');
-  if (cellChart) cellChart.destroy();
-  const datasets = [{
-    label: `${d.variable} (${d.unit})`,
+  if (compareCell) {
+    compareMarker = makeMarker(compareCell.lat, compareCell.lon, '#1d5fa8');
+    compareMarker.addTo(leafletMap);
+  }
+}
+
+/* ---------- Cell inspector + compare mode ---------- */
+function setChip(id, text) { $(id).textContent = text; }
+function cellDatasets(d, colour, labelSuffix) {
+  const sets = [{
+    label: 'Cell ' + d.cell_lat + '\u00B0, ' + d.cell_lon + '\u00B0 \u2014 ' + d.variable +
+      ' (' + d.unit + ')' + (labelSuffix ? ' ' + labelSuffix : ''),
     data: d.values,
-    borderColor: '#38bdf8',
-    backgroundColor: 'rgba(56,189,248,0.10)',
-    pointRadius: 2,
-    pointBackgroundColor: '#38bdf8',
+    borderColor: colour,
+    backgroundColor: colour === '#1d5fa8' ? 'rgba(29,95,168,0.08)' : 'rgba(178,106,0,0.08)',
+    pointRadius: 2, pointBackgroundColor: colour,
     tension: 0.1,
   }];
-  if (d.trend) {
-    const slopeYr = d.trend.slope_per_decade / 10;
-    const loYr = d.trend.ci_lo_per_decade / 10;
-    const hiYr = d.trend.ci_hi_per_decade / 10;
-    const line = (s) => d.years.map(y => d.trend.median_value + s * (y - d.trend.median_year));
-    datasets.push({
-      label: 'Trend (Sen’s slope)',
-      data: line(slopeYr),
-      borderColor: '#f87171',
-      borderDash: [6, 4],
-      pointRadius: 0,
-      tension: 0,
-    });
-    datasets.push({
-      label: '95% CI (low)',
-      data: line(loYr),
-      borderColor: 'rgba(248,113,113,0.30)',
-      pointRadius: 0,
-      tension: 0,
-    });
-    datasets.push({
-      label: '95% CI (high)',
-      data: line(hiYr),
-      borderColor: 'rgba(248,113,113,0.30)',
-      backgroundColor: 'rgba(248,113,113,0.14)',
-      fill: '-1',
-      pointRadius: 0,
-      tension: 0,
-    });
+  if (d.trend) sets.push.apply(sets, trendLineDatasets(d, '#b2182b'));
+  return sets;
+}
+function renderCellChart() {
+  if (!CHART_OK || !primaryCell) return;
+  const p = primaryCell.payload;
+  const datasets = cellDatasets(p, '#1d5fa8', '');
+  if (compareCell) {
+    datasets.push.apply(datasets, cellDatasets(compareCell.payload, '#b26a00', '(comparison)'));
   }
-  cellChart = new Chart(ctx, {
+  if (cellState.chart) cellState.chart.destroy();
+  cellState.chart = new Chart($('cell-chart'), {
     type: 'line',
-    data: { labels: d.years, datasets },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: true, labels: { color: '#dce8f5' } } },
-      scales: {
-        x: { title: { display: true, text: 'Year', color: '#a9bdd4' } },
-        y: { title: { display: true, text: d.variable + ' (' + d.unit + ')', color: '#a9bdd4' } }
+    data: { labels: p.years, datasets },
+    options: baseChartOptions(p.variable + ' (' + p.unit + ')'),
+  });
+}
+function renderComparePanel() {
+  const panel = $('compare-panel');
+  if (!compareCell || !primaryCell) { panel.hidden = true; $('compare-verdicts').textContent = ''; return; }
+  panel.hidden = false;
+  const row = (tag, d) => {
+    const t = d.payload.trend;
+    const q = (t && t.q_value !== null && t.q_value !== undefined) ? t.q_value.toExponential(1) : 'n/a';
+    return '<tr><td><strong>' + tag + '</strong></td>' +
+      '<td>' + d.lat + '\u00B0, ' + d.lon + '\u00B0</td>' +
+      '<td class="num">' + (t ? fmtSigned(t.slope_per_decade) + ' ' + d.payload.unit + '/decade' : '\u2014') + '</td>' +
+      '<td>' + (t ? fmtP(t.p_value) : '\u2014') + '</td>' +
+      '<td>' + q + '</td></tr>';
+  };
+  $('compare-body').innerHTML = row('A', primaryCell) + row('B', compareCell);
+  $('compare-verdicts').textContent =
+    'A: ' + (primaryCell.payload.verdict || '') + '  B: ' + (compareCell.payload.verdict || '');
+}
+function showCell(d) {
+  $('cell-empty').hidden = true;
+  $('cell-content').hidden = false;
+  $('cell-title').textContent =
+    'Cell ' + d.cell_lat + '\u00B0, ' + d.cell_lon + '\u00B0 \u2014 ' + d.variable + ' (' + d.unit + ')';
+  const v = $('cell-verdict');
+  v.textContent = d.verdict;
+  v.className = 'verdict ' + ((d.trend && d.trend.significant_bh) ? 'sig' : 'nosig');
+  $('cell-meta').textContent =
+    'Grid cell centre ' + d.cell_lat + '\u00B0, ' + d.cell_lon + '\u00B0 \u00B7 ' +
+    d.years[0] + '\u2013' + d.years[d.years.length - 1] + ' \u00B7 ' +
+    'n = ' + d.n + ' years with data \u00B7 Source: ' + d.source +
+    (d.trend ? ' \u00B7 Sen\u2019s slope ' + fmtSigned(d.trend.slope_per_decade) + ' ' + d.unit + '/decade ' +
+      '(95% CI ' + fmtSigned(d.trend.ci_lo_per_decade) + ' to ' +
+      fmtSigned(d.trend.ci_hi_per_decade) + ') \u00B7 ' +
+      'p = ' + fmtP(d.trend.p_value) +
+      (d.trend.q_value !== null && d.trend.q_value !== undefined
+        ? ' \u00B7 q = ' + d.trend.q_value.toExponential(1) : '') : '');
+  if (d.trend) {
+    setChip('cell-chip-slope', fmtSigned(d.trend.slope_per_decade) + ' ' + d.unit + '/decade');
+    setChip('cell-chip-p', fmtP(d.trend.p_value));
+    setChip('cell-chip-q', (d.trend.q_value !== null && d.trend.q_value !== undefined)
+      ? d.trend.q_value.toExponential(1) : 'n/a');
+    setChip('cell-chip-ci',
+      fmtSigned(d.trend.ci_lo_per_decade) + ' to ' + fmtSigned(d.trend.ci_hi_per_decade));
+  } else {
+    setChip('cell-chip-slope', '\u2014'); setChip('cell-chip-p', '\u2014');
+    setChip('cell-chip-q', '\u2014'); setChip('cell-chip-ci', '\u2014');
+  }
+  /* The Lahore disagreement note appears only for the Lahore temperature cell. */
+  $('lahore-note').hidden =
+    !(mapVarSel.value === 'temperature' && d.cell_lat === 31.0 && d.cell_lon === 75.0);
+}
+async function fetchCell(lat, lon) {
+  const res = await fetch('/api/cell?variable=' + mapVarSel.value + '&lat=' + lat + '&lon=' + lon);
+  const d = await res.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+async function selectPrimary(lat, lon) {
+  compareArmed = false;
+  hideStoryPhoto();
+  $('compare-hint').hidden = true;
+  $('compare-pin').textContent = 'Pin a second cell to compare';
+  const d = await fetchCell(lat, lon);
+  primaryCell = { lat: d.cell_lat, lon: d.cell_lon, payload: d };
+  showCell(d);
+  renderCellChart();
+  renderComparePanel();
+  placeMarkers();
+}
+async function selectCompare(lat, lon) {
+  const d = await fetchCell(lat, lon);
+  compareCell = { lat: d.cell_lat, lon: d.cell_lon, payload: d };
+  compareArmed = false;
+  $('compare-hint').hidden = true;
+  $('compare-pin').textContent = 'Pin a second cell to compare';
+  $('compare-clear').hidden = false;
+  renderCellChart();
+  renderComparePanel();
+  placeMarkers();
+}
+function onMapClick(e) {
+  if (!mapData) return;
+  const c = nearestCell(e.latlng.lat, e.latlng.lng);
+  if (compareArmed) selectCompare(c.lat, c.lon);
+  else selectPrimary(c.lat, c.lon);
+}
+function flyToCell(lat, lon, zoom) {
+  if (leafletMap) leafletMap.flyTo([lat, lon], zoom || 5, { duration: 0.9 });
+}
+async function gotoCell(lat, lon, variable) {
+  if (mapVarSel.value !== variable) {
+    mapVarSel.value = variable;
+    await loadMap();
+  }
+  flyToCell(lat, lon, 5);
+  await selectPrimary(lat, lon);
+}
+function setPresetNote(text) { $('preset-note').textContent = text; }
+async function presetFastest(variable, kind) {
+  if (mapVarSel.value !== variable) {
+    mapVarSel.value = variable;
+    await loadMap();
+  }
+  if (!mapData) return;
+  let best = null;
+  for (let i = 0; i < mapData.lat.length; i++) {
+    for (let j = 0; j < mapData.lon.length; j++) {
+      const s = mapData.slope_per_decade[i][j];
+      if (s === null || s === undefined || !mapData.significant[i][j]) continue;
+      if (!best || s > best.slope) {
+        best = { i, j, slope: s, lat: mapData.lat[i], lon: normLon(mapData.lon[j]) };
       }
     }
-  });
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  if (!best) { setPresetNote('No significant cells for this variable.'); return; }
+  const where = fmtLatLon(best.lat, best.lon);
+  if (kind === 'warming') {
+    setPresetNote('Fastest warming cell: ' + where + ' \u2014 ' +
+      fmtSigned(best.slope, 2) + ' \u00B0C/decade, significant after false-discovery control (Arctic).');
+  } else {
+    setPresetNote('Fastest wetting cell: ' + where + ' \u2014 ' +
+      fmtSigned(best.slope, 2) + ' mm/day/decade, significant after false-discovery control.');
+  }
+  flyToCell(best.lat, best.lon, 4);
+  await selectPrimary(best.lat, best.lon);
+  showPresetPhoto(kind);
 }
-
-mapCanvas.addEventListener('click', (evt) => {
-  if (!mapData) return;
-  const { i, j, lat, lon } = cellAt(evt);
-  selectedCell = { i, j };
-  drawMap();
-  loadCell(lat, lon);
+async function presetLahore() {
+  setPresetNote('Lahore: NASA POWER says no significant warming (\u22120.061 \u00B0C/decade, p = 0.53); ' +
+    'the GISTEMP cell says it is warming (+0.26 \u00B0C/decade, p \u2248 1\u00D710\u207B\u2075) \u2014 and all eight neighbouring cells agree.');
+  await gotoCell(31.52, 74.36, 'temperature');
+  showPresetPhoto('lahore');
+}
+$('preset-warming').addEventListener('click', () => presetFastest('temperature', 'warming'));
+$('preset-wetting').addEventListener('click', () => presetFastest('precipitation', 'wetting'));
+$('preset-lahore').addEventListener('click', presetLahore);
+$('empty-lahore').addEventListener('click', presetLahore);
+$('empty-fastest').addEventListener('click', () => presetFastest('temperature', 'warming'));
+$('compare-pin').addEventListener('click', () => {
+  if (!primaryCell) return;
+  compareArmed = true;
+  $('compare-hint').hidden = false;
+  $('compare-pin').textContent = 'Comparing\u2026 click another cell on the map';
 });
-mapCanvas.addEventListener('mousemove', showTooltip);
-mapCanvas.addEventListener('mouseleave', hideTooltip);
-mapVarSel.addEventListener('change', loadMap);
+$('compare-clear').addEventListener('click', () => {
+  compareCell = null;
+  compareArmed = false;
+  $('compare-clear').hidden = true;
+  $('compare-hint').hidden = true;
+  $('compare-pin').textContent = 'Pin a second cell to compare';
+  renderCellChart();
+  renderComparePanel();
+  placeMarkers();
+});
+mapVarSel.addEventListener('change', () => { mapData = null; hideStoryPhoto(); loadMap(); });
+
+wireZoom($('chart'), () => seriesState.chart);
+wireZoom($('cell-chart'), () => cellState.chart);
+bindZoomButtons('data-series-zoom', () => seriesState.chart);
+bindZoomButtons('data-cell-zoom', () => cellState.chart);
+
+/* ---------- Boot ---------- */
+syncVariables();
+syncChips();
+loadSeries();
+loadSummary();
+initLeaflet();
 loadMap();
 </script>
 </body>

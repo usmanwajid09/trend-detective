@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 248 56" role="img" aria-label="Overthinkers">
+  <!-- Thought bubble -->
+  <circle cx="28" cy="23" r="19" fill="#ffffff" stroke="#1d5fa8" stroke-width="3.5"/>
+  <!-- Rising trend line inside the bubble -->
+  <polyline points="19,30 24,25 28,28 37,16" fill="none" stroke="#1d5fa8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Thought dots trailing from the bubble -->
+  <circle cx="12" cy="44" r="3" fill="#1d5fa8"/>
+  <circle cx="5" cy="50" r="2" fill="#1d5fa8"/>
+  <!-- Wordmark -->
+  <text x="58" y="32" font-family="Inter, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="19" font-weight="800" letter-spacing="2.5" fill="#16191d">OVERTHINKERS</text>
+</svg>
