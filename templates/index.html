@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trend Detective — NASA Space Apps 2026</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>🌍 Trend Detective</h1>
+  <p class="sub">What is changing, where, how much — and is it significant?
+     Built on real NASA data for the NASA Space Apps Challenge 2026.</p>
+</header>
+
+<main>
+  <section class="controls">
+    <label>Region
+      <select id="region">
+        {% for rid, r in regions.items() %}
+        <option value="{{ rid }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Variable
+      <select id="variable">
+        {% for vid, v in variables.items() %}
+        <option value="{{ vid }}">{{ v.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </section>
+
+  <section class="chart-box">
+    <canvas id="chart"></canvas>
+  </section>
+
+  <section id="verdict" class="verdict">Loading…</section>
+
+  <section class="details">
+    <p id="meta"></p>
+    <p id="note" class="note"></p>
+  </section>
+
+  <section class="summary">
+    <h2>What changed, where, how much</h2>
+    <table id="summary-table">
+      <thead><tr><th>Region</th><th>Variable</th><th>Period</th>
+      <th>Change / decade</th><th>Significant?</th><th>Verdict</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p>Data: NASA POWER (power.larc.nasa.gov) and NASA GISTEMP v4
+    (data.giss.nasa.gov). Trends are ordinary least-squares regressions with a
+    two-sided p-value; “significant” means p &lt; 0.05. No data is invented —
+    the app serves the cached downloads in <code>data/</code>.</p>
+    <p>AI disclosure: this starter was built with AI assistance (Muse).</p>
+  </footer>
+</main>
+
+<script>
+let chart = null;
+const regionSel = document.getElementById('region');
+const variableSel = document.getElementById('variable');
+
+async function loadSeries() {
+  const region = regionSel.value;
+  const variable = variableSel.value;
+  const res = await fetch(`/api/series?region=${region}&variable=${variable}`);
+  const d = await res.json();
+  if (d.error) {
+    document.getElementById('verdict').textContent = 'Error: ' + d.error;
+    return;
+  }
+  const ctx = document.getElementById('chart');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.years,
+      datasets: [{
+        label: `${d.variable} — ${d.region} (${d.unit})`,
+        data: d.values,
+        borderColor: '#0b5fa5',
+        backgroundColor: 'rgba(11,95,165,0.08)',
+        pointRadius: 2,
+        tension: 0.1,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: {
+        x: { title: { display: true, text: 'Year' } },
+        y: { title: { display: true, text: d.variable + ' (' + d.unit + ')' } }
+      }
+    }
+  });
+  const v = document.getElementById('verdict');
+  v.textContent = d.verdict;
+  v.className = 'verdict ' + (d.trend.significant ? 'sig' : 'nosig');
+  document.getElementById('meta').textContent =
+    `${d.region} · ${d.variable} · ${d.trend.start_year}–${d.trend.end_year} · ` +
+    `n = ${d.trend.n} · slope ${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade ` +
+    `· p = ${d.trend.p_value === null ? 'n/a' : d.trend.p_value.toExponential(2)} ` +
+    `· r = ${d.trend.r.toFixed(2)} · Source: ${d.source}`;
+  document.getElementById('note').textContent = d.note;
+}
+
+async function loadSummary() {
+  const res = await fetch('/api/summary');
+  const rows = await res.json();
+  const tbody = document.querySelector('#summary-table tbody');
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${r.region}</td><td>${r.variable}</td><td>${r.years}</td>
+    <td>${r.slope_per_decade >= 0 ? '+' : ''}${r.slope_per_decade.toFixed(3)} ${r.unit}/decade</td>
+    <td>${r.significant ? 'Yes' : 'No'}</td>
+    <td>${r.verdict}</td></tr>`).join('');
+}
+
+// Global has temperature only: keep the variable selector honest.
+function syncVariables() {
+  const globalOnly = regionSel.value === 'global';
+  [...variableSel.options].forEach(o => {
+    o.disabled = globalOnly && o.value !== 'temperature';
+  });
+  if (globalOnly) variableSel.value = 'temperature';
+}
+
+regionSel.addEventListener('change', () => { syncVariables(); loadSeries(); });
+variableSel.addEventListener('change', loadSeries);
+syncVariables();
+loadSeries();
+loadSummary();
+</script>
+</body>
+</html>
