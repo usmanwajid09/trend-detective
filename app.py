@@ -20,16 +20,21 @@ from flask import Flask, jsonify, render_template, request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from src.changepoint import detect_changepoint  # noqa: E402
 from src.data import REGIONS, VARIABLES, load_series  # noqa: E402
-from src.grid import DATASETS, cell_series, load_dataset, load_trend_map, trend_map  # noqa: E402
-from src.trends import analyse_trend, verdict  # noqa: E402
+from src.grid import (DATASETS, SEASONS, cell_series, load_dataset,  # noqa: E402
+                      load_trend_map, trend_map)
+from src.seaice import (SOURCE as SEAICE_SOURCE,  # noqa: E402
+                        SOURCE_URL as SEAICE_URL, UNIT as SEAICE_UNIT,
+                        load_cache as load_seaice_cache)
+from src.trends import analyse_trend, fmt_p, verdict  # noqa: E402
 from stats.mannkendall import mann_kendall  # noqa: E402
 
 app = Flask(__name__)
 
 GRID_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "grid")
 
-# In-memory cache of loaded trend maps: (variable, start, end) -> payload.
+# In-memory cache of loaded trend maps: (variable, start, end, season) -> payload.
 _MAP_CACHE = {}
 
 
@@ -50,15 +55,28 @@ def _jsonable(arr, round_to=None):
     return out
 
 
-def _load_map_payload(variable, start_year=None, end_year=None):
+def _load_map_payload(variable, start_year=None, end_year=None,
+                      season="annual"):
     """Trend-map payload, from the precomputed file when the window is the
-    default full period, else computed on demand (slow, cached in memory)."""
-    key = (variable, start_year, end_year)
+    default full period, else computed on demand (slow, cached in memory).
+
+    Seasonal maps are precomputed files too (map_<variable>_<season>.npz);
+    they are never computed on demand — a missing seasonal file raises
+    FileNotFoundError (the route turns it into a 503).
+    """
+    if season != "annual" and (start_year is not None or end_year is not None):
+        raise ValueError("seasonal maps are precomputed for the full period "
+                         "only; start_year/end_year cannot be combined "
+                         "with season")
+    key = (variable, start_year, end_year, season)
     if key in _MAP_CACHE:
         return _MAP_CACHE[key]
     info = DATASETS[variable]
     if start_year is None and end_year is None:
-        path = os.path.join(GRID_DIR, info["map_file"])
+        if season == "annual":
+            path = os.path.join(GRID_DIR, info["map_file"])
+        else:
+            path = os.path.join(GRID_DIR, f"map_{variable}_{season}.npz")
         if not os.path.exists(path):
             raise FileNotFoundError(f"precomputed map missing: {path}")
         result = load_trend_map(path)
@@ -67,6 +85,7 @@ def _load_map_payload(variable, start_year=None, end_year=None):
             "variable": variable,
             "unit": meta["unit"],
             "source": meta["source"],
+            "season": season,
             "years": meta["years"],
             "lat": [round(float(v), 2) for v in result["lat"]],
             "lon": [round(float(v), 2) for v in result["lon"]],
@@ -85,6 +104,7 @@ def _load_map_payload(variable, start_year=None, end_year=None):
             "variable": variable,
             "unit": cache["meta"]["unit"],
             "source": cache["meta"]["source"],
+            "season": "annual",
             "years": result["years"],
             "lat": [round(float(v), 2) for v in result["lat"]],
             "lon": [round(float(v), 2) for v in result["lon"]],
@@ -158,17 +178,26 @@ def map_data():
     """Per-cell trend map for a variable (default: full-period, precomputed).
 
     Query params: variable=temperature|precipitation (default temperature),
-    optional start_year/end_year for an on-demand window (slower).
+    optional season=annual|DJF|MAM|JJA|SON (default annual; seasonal maps
+    are precomputed files, missing ones return 503), optional
+    start_year/end_year for an on-demand annual window (slower, and not
+    combinable with a season).
     """
     variable = request.args.get("variable", "temperature")
     if variable not in DATASETS:
         return jsonify({"error": f"unknown variable: {variable}"}), 400
+    season = request.args.get("season", "annual")
+    if season not in SEASONS:
+        return jsonify({"error": f"unknown season: {season}"}), 400
     start_year = request.args.get("start_year", type=int)
     end_year = request.args.get("end_year", type=int)
     try:
-        return jsonify(_load_map_payload(variable, start_year, end_year))
+        return jsonify(_load_map_payload(variable, start_year, end_year,
+                                         season=season))
     except FileNotFoundError as exc:
         return jsonify({"error": str(exc)}), 503
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
 
 @app.route("/api/cell")
@@ -236,6 +265,207 @@ def cell_data():
         payload["verdict"] = (
             f"Too few years with data (n = {int(finite.sum())}) to test a trend.")
     return jsonify(payload)
+
+
+# ---------------------------------------------------------------------------
+# Decadal trends and change point (the "more trends" depth package)
+# ---------------------------------------------------------------------------
+
+
+def _decade_windows():
+    """The five calendar decades shown by /api/decades."""
+    return [("1980s", 1980, 1989), ("1990s", 1990, 1999),
+            ("2000s", 2000, 2009), ("2010s", 2010, 2019),
+            ("2020s", 2020, 2029)]
+
+
+def _mk_or_null(years, values):
+    """Mann-Kendall + Sen's slope for one (sub)series, or null slopes
+    when fewer than 5 finite years are available."""
+    years = np.asarray(years, dtype=float)
+    values = np.asarray(values, dtype=float)
+    finite = np.isfinite(values)
+    n = int(finite.sum())
+    if n < 5:
+        return {"slope_per_decade": None, "p_value": None,
+                "significant": False, "n": n}
+    mk = mann_kendall(values, years, correction="hamed-rao", lag=3)
+    return {"slope_per_decade": round(mk["slope_per_decade"], 4),
+            "p_value": mk["p_value"],
+            "significant": bool(mk["significant"]), "n": mk["n"]}
+
+
+def decadal_trends(years, values):
+    """Decade-by-decade Mann-Kendall trends plus a full-period anchor.
+
+    Returns (decades, full_period): decades is one entry per calendar
+    decade (1980s-2020s) with slope_per_decade/p_value null when the
+    decade holds fewer than 5 finite years; full_period is the same
+    test over the whole series.
+    """
+    years = np.asarray(years, dtype=float)
+    values = np.asarray(values, dtype=float)
+    decades = []
+    for name, start, end in _decade_windows():
+        in_window = (years >= start) & (years <= end)
+        res = _mk_or_null(years[in_window], values[in_window])
+        decades.append({"decade": name, "start_year": start,
+                        "end_year": end, **res})
+    full = _mk_or_null(years, values)
+    finite_years = years[np.isfinite(values)]
+    full_period = {
+        "slope_per_decade": full["slope_per_decade"],
+        "p_value": full["p_value"],
+        "significant": full["significant"],
+        "start_year": int(finite_years.min()) if len(finite_years) else None,
+        "end_year": int(finite_years.max()) if len(finite_years) else None,
+        "n": full["n"],
+    }
+    return decades, full_period
+
+
+def _parse_lat_lon_pair():
+    """(lat, lon) from query params, or None for the global series.
+
+    Raises ValueError on a half-given pair or non-numeric/out-of-range
+    values — the route turns those into 400s.
+    """
+    lat_raw = request.args.get("lat")
+    lon_raw = request.args.get("lon")
+    if (lat_raw is None) != (lon_raw is None):
+        raise ValueError("lat and lon must be given together")
+    if lat_raw is None:
+        return None
+    try:
+        lat = float(lat_raw)
+        lon = float(lon_raw)
+    except (ValueError, TypeError):
+        raise ValueError("lat and lon must be numbers")
+    if not (-90 <= lat <= 90 and -540 <= lon <= 540):
+        raise ValueError("lat must be -90..90 and lon -540..540")
+    return lat, lon
+
+
+@app.route("/api/decades")
+def decades():
+    """Mann-Kendall trend per calendar decade (1980s-2020s).
+
+    Query params: variable=temperature|precipitation (default
+    temperature); without lat/lon the global mean series is used, with
+    lat/lon the grid cell at that point (same source as /api/cell).
+    """
+    variable = request.args.get("variable", "temperature")
+    if variable not in DATASETS:
+        return jsonify({"error": f"unknown variable: {variable}"}), 400
+    try:
+        pair = _parse_lat_lon_pair()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    try:
+        if pair is None:
+            years, values, meta = load_series("global", variable)
+            label_text = "Global mean"
+            unit = meta["unit"]
+            source = meta["source"]
+        else:
+            lat, lon = pair
+            cache = load_dataset(variable, GRID_DIR)
+            series = cell_series(cache, lat, lon)
+            years = np.array(series["years"], dtype=float)
+            values = np.array([np.nan if v is None else v
+                               for v in series["values"]], dtype=float)
+            label_text = (f"Cell {series['cell_lat']:g}°, "
+                          f"{series['cell_lon']:g}°")
+            unit = series["unit"]
+            source = series["source"]
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    except OSError as exc:
+        return jsonify({"error": str(exc)}), 503
+    decade_list, full_period = decadal_trends(years, values)
+    return jsonify({
+        "variable": variable,
+        "unit": unit,
+        "label": label_text,
+        "source": source,
+        "decades": decade_list,
+        "full_period": full_period,
+    })
+
+
+@app.route("/api/changepoint")
+def changepoint():
+    """Single change point in the global mean series (CUSUM scan; see
+    src/changepoint.py for the method in plain words).
+
+    Query param: variable=temperature|precipitation (default temperature).
+    Only the global series is analysed, so precipitation — which has no
+    global series — returns 400.
+    """
+    variable = request.args.get("variable", "temperature")
+    if variable not in DATASETS:
+        return jsonify({"error": f"unknown variable: {variable}"}), 400
+    try:
+        years, values, meta = load_series("global", variable)
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    result = detect_changepoint(years, values)
+    before = result["before"]
+    after = result["after"]
+    return jsonify({
+        "variable": variable,
+        "label": "Global mean",
+        "method": result["method"],
+        "supported": result["supported"],
+        "break_year": result["break_year"],
+        "statistic": result["statistic"],
+        "p_value": result["p_value"],
+        "before": before,
+        "after": after,
+    })
+
+
+@app.route("/api/seaice")
+def seaice_data():
+    """Arctic sea ice extent: September (minimum), March (maximum) and
+    annual-mean series, 1979-2025, with Mann-Kendall trends (same method
+    as the map cells).  Not a map — one line chart per series."""
+    try:
+        cache = load_seaice_cache()
+    except (FileNotFoundError, OSError) as exc:
+        return jsonify({"error": str(exc)}), 503
+    years = cache["years"].astype(float)
+    trends = {}
+    for key in ("september", "march", "annual_mean"):
+        values = cache[key].astype(float)
+        mk = mann_kendall(values, years, correction="hamed-rao", lag=3)
+        trends[key] = {
+            "slope_per_decade": round(mk["slope_per_decade"], 4),
+            "p_value": mk["p_value"],
+            "significant": mk["significant"],
+            "n": mk["n"],
+        }
+    sept = trends["september"]
+    direction = "shrinking" if sept["slope_per_decade"] < 0 else "growing"
+    verdict_text = (
+        f"September Arctic sea ice is {direction}: "
+        f"{sept['slope_per_decade']:+.3f} million km² per decade "
+        f"({fmt_p(sept['p_value'])}, n = {sept['n']}), "
+        f"from {float(cache['september'][0]):.2f} million km² in "
+        f"{int(cache['years'][0])} to {float(cache['september'][-1]):.2f} "
+        f"in {int(cache['years'][-1])}.")
+    return jsonify({
+        "variable": "sea_ice_extent",
+        "unit": SEAICE_UNIT,
+        "source": SEAICE_SOURCE,
+        "source_url": SEAICE_URL,
+        "years": [int(y) for y in cache["years"]],
+        "september": [round(float(v), 3) for v in cache["september"]],
+        "march": [round(float(v), 3) for v in cache["march"]],
+        "annual_mean": [round(float(v), 3) for v in cache["annual_mean"]],
+        "trends": trends,
+        "verdict": verdict_text,
+    })
 
 
 if __name__ == "__main__":

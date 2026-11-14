@@ -372,6 +372,35 @@ footer {
 footer strong { color: var(--muted); }
 footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 0.35rem; border-radius: 4px; }
 
+/* ---------- Decades / leaderboard (more-trends depth) ---------- */
+.inspector #decades-section { margin-top: 1.25rem; }
+#decades-section h3 { font-size: 1rem; margin: 1.1rem 0 0.5rem; }
+#decades-chart { max-height: 260px; }
+#map-season-label { font-weight: 700; color: var(--ink); }
+.decades-table, .leaderboard-table {
+  width: 100%; border-collapse: collapse; background: var(--bg); font-size: 0.9rem;
+}
+.decades-table th, .decades-table td,
+.leaderboard-table th, .leaderboard-table td {
+  padding: 0.5rem 0.7rem; text-align: left; border-bottom: 1px solid var(--line);
+}
+.decades-table thead th, .leaderboard-table thead th {
+  background: var(--bg-soft); color: var(--muted);
+  font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase;
+  white-space: nowrap; border-bottom: 1px solid var(--line-dark);
+}
+.decades-table tbody tr:last-child td, .leaderboard-table tbody tr:last-child td { border-bottom: none; }
+.decades-table td.num, .leaderboard-table td.num {
+  font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap;
+}
+.leaderboard-table tr.row-clickable { cursor: pointer; }
+.leaderboard-table tr.row-clickable:hover { background: #eef4fa; }
+.leaderboard-table tr.lb-group td {
+  background: var(--bg-soft); font-weight: 700; font-size: 0.88rem;
+  color: var(--ink); border-bottom: 1px solid var(--line-dark);
+}
+#decades-section .table-wrap, #leaderboard-section .table-wrap { margin-top: 0.8rem; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1080px) {
   .work-grid { grid-template-columns: 1fr; }

@@ -160,8 +160,30 @@ def gunzip(path, dest):
     return dest
 
 
-def build_cache(dataset, season="annual", raw_dir=RAW_DIR, out_dir=GRID_DIR):
-    """Build data/grid/<dataset>.npz from the raw NetCDF. Returns metadata."""
+def _cache_filename(dataset, season):
+    """Cache filename for a dataset/season.  Annual keeps the historic
+    name; seasonal caches get a distinct name so a seasonal build can
+    never overwrite the annual cache the app serves."""
+    if season == "annual":
+        return DATASETS[dataset]["cache_file"]
+    return f"{dataset}_{season}.npz"
+
+
+def _map_filename(dataset, season):
+    if season == "annual":
+        return DATASETS[dataset]["map_file"]
+    return f"map_{dataset}_{season}.npz"
+
+
+def build_cache(dataset, season="annual", raw_dir=RAW_DIR, out_dir=GRID_DIR,
+                out_file=None):
+    """Build a grid cache from the raw NetCDF. Returns metadata.
+
+    The cache is written to ``out_dir/<out_file>``; when ``out_file`` is
+    omitted it defaults to the annual name for season="annual" and to
+    ``<dataset>_<season>.npz`` otherwise, so seasonal builds never
+    clobber the annual cache.
+    """
     if dataset not in DATASETS:
         raise ValueError(f"unknown dataset: {dataset}")
     info = DATASETS[dataset]
@@ -186,11 +208,12 @@ def build_cache(dataset, season="annual", raw_dir=RAW_DIR, out_dir=GRID_DIR):
         "grid": f"{len(lat)}x{len(lon)}",
     }
     os.makedirs(out_dir, exist_ok=True)
-    out = os.path.join(out_dir, info["cache_file"])
+    out_name = out_file if out_file is not None else _cache_filename(dataset, season)
+    out = os.path.join(out_dir, out_name)
     np.savez_compressed(out, years=years.astype(np.int32), lat=lat, lon=lon,
                         values=values, counts=counts,
                         meta=np.array([json.dumps(meta)]))
-    meta["cache_file"] = info["cache_file"]
+    meta["cache_file"] = out_name
     meta["cache_bytes"] = os.path.getsize(out)
     return meta
 
@@ -309,11 +332,19 @@ def load_trend_map(path):
     return result
 
 
-def build_map(dataset, grid_dir=GRID_DIR, **kwargs):
-    """Compute the default (full-period) trend map and save it."""
+def build_map(dataset, grid_dir=GRID_DIR, cache_path=None, map_file=None,
+              **kwargs):
+    """Compute the default (full-period) trend map and save it.
+
+    ``cache_path`` loads a cache from an explicit path instead of the
+    annual cache (used for seasonal maps built from scratch caches);
+    ``map_file`` overrides the output filename, which otherwise defaults
+    to the annual name (season="annual") or ``map_<dataset>_<season>.npz``.
+    """
     if dataset not in DATASETS:
         raise ValueError(f"unknown dataset: {dataset}")
-    cache = load_dataset(dataset, grid_dir)
+    cache = load_cache(cache_path) if cache_path else load_dataset(dataset,
+                                                                  grid_dir)
     result = trend_map(cache, **kwargs)
     meta = {
         "dataset": dataset,
@@ -327,9 +358,11 @@ def build_map(dataset, grid_dir=GRID_DIR, **kwargs):
         "min_n": kwargs.get("min_n", 10),
         "fdr": "Benjamini-Hochberg",
     }
-    out = os.path.join(grid_dir, DATASETS[dataset]["map_file"])
+    out_name = map_file if map_file is not None else _map_filename(
+        dataset, cache["meta"]["season"])
+    out = os.path.join(grid_dir, out_name)
     size = save_trend_map(out, result, meta)
-    meta["map_file"] = DATASETS[dataset]["map_file"]
+    meta["map_file"] = out_name
     meta["map_bytes"] = size
     return meta
 
@@ -343,20 +376,40 @@ def main(argv=None):
     p_build.add_argument("--dataset", choices=list(DATASETS) + ["all"],
                          default="all")
     p_build.add_argument("--season", choices=list(SEASONS), default="annual")
+    p_build.add_argument("--out-dir", default=GRID_DIR,
+                         help="directory for the cache file(s)")
+    p_build.add_argument("--out-file", default=None,
+                         help="override the cache filename")
     p_map = sub.add_parser("map", help="compute and save default trend maps")
     p_map.add_argument("--dataset", choices=list(DATASETS) + ["all"],
                        default="all")
+    p_map.add_argument("--season", choices=list(SEASONS) + [None],
+                       default=None,
+                       help="season of the cache to map (default: annual)")
+    p_map.add_argument("--cache-dir", default=GRID_DIR,
+                       help="directory holding the cache file(s)")
+    p_map.add_argument("--map-file", default=None,
+                       help="override the output map filename")
     args = parser.parse_args(argv)
 
     names = list(DATASETS) if args.dataset == "all" else [args.dataset]
     if args.command == "build":
         for name in names:
-            meta = build_cache(name, season=args.season)
+            meta = build_cache(name, season=args.season,
+                               out_dir=args.out_dir, out_file=args.out_file)
             print(f"OK   {name}: {meta['n_years']} years, {meta['grid']} grid, "
                   f"{meta['cache_bytes']} bytes -> {meta['cache_file']}")
     else:
         for name in names:
-            meta = build_map(name)
+            season = args.season or "annual"
+            if args.cache_dir == GRID_DIR and season == "annual" \
+                    and args.map_file is None:
+                meta = build_map(name)
+            else:
+                cache_path = os.path.join(
+                    args.cache_dir, _cache_filename(name, season))
+                meta = build_map(name, cache_path=cache_path,
+                                 map_file=args.map_file)
             print(f"OK   {name} map: {meta['years'][0]}-{meta['years'][1]}, "
                   f"{meta['map_bytes']} bytes -> {meta['map_file']}")
     return 0

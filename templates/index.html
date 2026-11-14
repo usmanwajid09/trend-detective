@@ -75,7 +75,7 @@
   <!-- ============ Global trend map ============ -->
   <section class="map-section" aria-label="Global trend map">
     <div class="section-head">
-      <h2>Global trend map</h2>
+      <h2 id="map-heading">Global trend map</h2>
       <p>Every cell is one Mann-Kendall trend test. Coloured cells passed the
       Benjamini-Hochberg check &mdash; a coloured cell is one you can trust.
       Grey cells were tested but are not significant; blank areas have too
@@ -89,11 +89,31 @@
           <option value="precipitation">Precipitation</option>
         </select>
       </label>
+      <label class="toolbar-label">Season
+        <select id="map-season">
+          <option value="annual">Annual</option>
+          <option value="DJF">Winter (DJF)</option>
+          <option value="MAM">Spring (MAM)</option>
+          <option value="JJA">Summer (JJA)</option>
+          <option value="SON">Autumn (SON)</option>
+        </select>
+      </label>
       <div class="presets" role="group" aria-label="Guided stories">
         <span class="presets-label">Guided stories:</span>
         <button type="button" class="preset" id="preset-warming">Fastest warming</button>
         <button type="button" class="preset" id="preset-wetting">Fastest wetting</button>
         <button type="button" class="preset" id="preset-lahore">The Lahore disagreement</button>
+      </div>
+      <div class="presets" role="group" aria-label="More places">
+        <span class="presets-label">More places:</span>
+        <button type="button" class="preset" id="preset-karachi" data-place-lat="24.86" data-place-lon="67.01">Karachi</button>
+        <button type="button" class="preset" id="preset-islamabad" data-place-lat="33.68" data-place-lon="73.05">Islamabad</button>
+        <button type="button" class="preset" id="preset-london" data-place-lat="51.51" data-place-lon="-0.13">London</button>
+        <button type="button" class="preset" id="preset-tokyo" data-place-lat="35.68" data-place-lon="139.69">Tokyo</button>
+        <button type="button" class="preset" id="preset-sydney" data-place-lat="-33.87" data-place-lon="151.21">Sydney</button>
+        <button type="button" class="preset" id="preset-arctic" data-place-lat="81" data-place-lon="19">Arctic</button>
+        <button type="button" class="preset" id="preset-amazon" data-place-lat="-3" data-place-lon="-60">Amazon</button>
+        <!-- No Sahara chip: its GISTEMP cell (23, 13) has no data (n = 0), verified 2026-11-14. -->
       </div>
       <p class="preset-note" id="preset-note" role="status"></p>
     </div>
@@ -108,6 +128,7 @@
         </div>
         <div class="legend" aria-label="Map legend">
           <span class="legend-title">Trend per decade, significant cells only (q &le; 0.05)</span>
+          <span class="legend-item" id="map-season-label">Annual</span>
           <span class="legend-scale">
             <span class="legend-item">Cooling / drier</span>
             <span class="legend-end" id="legend-min">&minus;0.98</span>
@@ -181,8 +202,73 @@
             </div>
           </div>
         </section>
+
+        <!-- ============ Is it speeding up? (decade-by-decade trends) ============ -->
+        <section id="decades-section" class="card" aria-label="Is it speeding up?">
+          <div class="card-head">
+            <h2>Is it speeding up?</h2>
+            <p class="card-sub">The same trend test, run decade by decade.
+            The table and chart below are the whole planet; inspect a cell
+            on the map and its own decades appear underneath.</p>
+          </div>
+          <p id="changepoint-callout" class="callout">Checking whether the trend changed pace&hellip;</p>
+          <div class="chart-box"><canvas id="decades-chart"></canvas></div>
+          <p class="note" id="decades-note" hidden></p>
+          <div class="table-wrap">
+            <table class="decades-table" id="decades-table">
+              <thead><tr><th>Decade</th><th>Slope / decade</th><th>p-value</th><th>Significant</th><th>n</th></tr></thead>
+              <tbody id="decades-tbody"></tbody>
+            </table>
+          </div>
+          <div id="decades-cell-block" hidden>
+            <h3 id="decades-cell-note"></h3>
+            <div class="table-wrap">
+              <table class="decades-table" id="decades-cell-table">
+                <thead><tr><th>Decade</th><th>Slope / decade</th><th>p-value</th><th>Significant</th><th>n</th></tr></thead>
+                <tbody id="decades-cell-tbody"></tbody>
+              </table>
+            </div>
+            <p class="note" id="decades-cell-error" hidden></p>
+          </div>
+        </section>
       </aside>
     </div>
+  </section>
+
+  <!-- ============ Leaderboard: fastest-changing cells ============ -->
+  <section id="leaderboard-section" class="card" aria-label="Leaderboard of fastest-changing cells">
+    <div class="card-head">
+      <h2 id="leaderboard-title">Leaderboard: the fastest-changing cells</h2>
+      <p class="card-sub" id="leaderboard-sub">Only cells that passed the
+      Benjamini-Hochberg check (q &le; 0.05) qualify &mdash; the top 10 in
+      each direction, computed from the map you are looking at. Switch the
+      map variable to see the other pair. Click a row to fly to that cell.</p>
+    </div>
+    <p class="note" id="leaderboard-note" hidden></p>
+    <div class="table-wrap">
+      <table class="leaderboard-table" id="leaderboard-table">
+        <thead><tr><th>Rank</th><th>Cell</th><th>Slope / decade</th><th>p-value</th><th>q-value</th></tr></thead>
+        <tbody id="leaderboard-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ Arctic sea ice ============ -->
+  <section id="seaice-section" class="card" aria-label="Arctic sea ice extent">
+    <div class="card-head">
+      <h2>The ice agrees</h2>
+      <p class="card-sub">Arctic sea ice extent (Northern Hemisphere),
+      September minimum and March maximum, 1979&ndash;2025 &mdash; NSIDC Sea
+      Ice Index, Version 4. A third, independent witness to the warming,
+      not a map: one line per series.</p>
+    </div>
+    <p class="note" id="seaice-note" hidden></p>
+    <div class="chart-box"><canvas id="seaice-chart"></canvas></div>
+    <p id="seaice-verdict" class="verdict"></p>
+    <p class="note">Source: NSIDC Sea Ice Index, Version 4 (NOAA@NSIDC,
+    G02135). Extent is the area covered by at least 15% ice, in million
+    km&sup2;. Trends are Mann-Kendall + Sen&rsquo;s slope, the same test as
+    the map cells.</p>
   </section>
 
   <!-- ============ Explore one place ============ -->
@@ -327,6 +413,11 @@
         correction</strong> (first 3 lags), and <strong>Benjamini-Hochberg
         false-discovery control</strong> &mdash; a coloured cell has
         q &le; 0.05.</p>
+        <p id="changepoint-about">Looking for a turning point is simpler
+        than it sounds: the tool scans every possible year and asks where
+        the trend shifts most &mdash; the year before which the slope was
+        one thing and after which it was another. If no single year stands
+        out clearly, it says so instead of inventing one.</p>
       </article>
       <article class="about-item">
         <h3>What it found</h3>
@@ -841,6 +932,20 @@ variableSel.addEventListener('change', loadSeries);
 const mapCanvas = $('map-canvas');
 const mapCtx = mapCanvas.getContext('2d');
 const mapVarSel = $('map-variable');
+const seasonSel = $('map-season');
+const SEASON_LABELS = { annual: 'Annual', DJF: 'Winter (DJF)', MAM: 'Spring (MAM)', JJA: 'Summer (JJA)', SON: 'Autumn (SON)' };
+function currentSeason() { return seasonSel ? seasonSel.value : 'annual'; }
+function seasonSuffix() {
+  const s = currentSeason();
+  return s === 'annual' ? '' : ' \u00B7 ' + (SEASON_LABELS[s] || s);
+}
+function updateSeasonLabel() {
+  const el = $('map-season-label');
+  if (el) el.textContent = SEASON_LABELS[currentSeason()] || 'Annual';
+  const h = $('map-heading');
+  if (h) h.textContent = 'Global trend map' + seasonSuffix();
+}
+function unitFor(variable) { return variable === 'precipitation' ? 'mm/day' : '\u00B0C'; }
 const mapTooltip = $('map-tooltip');
 let mapData = null;
 let leafletMap = null, overlay = null;
@@ -912,7 +1017,7 @@ function paintOverlay() {
     mapData.source + ' \u00B7 ' + mapData.years[0] + '\u2013' + mapData.years[1] + ' \u00B7 ' +
     tested.toLocaleString() + ' cells tested \u00B7 ' + sig.toLocaleString() + ' significant ' +
     'after Benjamini-Hochberg (q \u2264 0.05) \u00B7 colour scale \u00B1' +
-    maxAbs.toFixed(2) + ' ' + mapData.unit + '/decade';
+    maxAbs.toFixed(2) + ' ' + mapData.unit + '/decade' + seasonSuffix();
   /* Keep the legend's scale labels on the same numbers as the paint. */
   const legendMin = $('legend-min'), legendMax = $('legend-max'), legendUnit = $('legend-unit');
   if (legendMin) legendMin.textContent = '\u2212' + maxAbs.toFixed(2);
@@ -994,15 +1099,22 @@ function onMapMouseMove(e) {
 
 async function loadMap() {
   const variable = mapVarSel.value;
-  setMapLoading(true, 'Fetching trend map \u2014 ' + (variable === 'temperature' ? 'GISTEMP v4, 1880\u20132026' : 'GPCP v2.3, 1979\u20132026') + '\u2026');
+  const season = currentSeason();
+  updateSeasonLabel();
+  setMapLoading(true, 'Fetching trend map \u2014 ' + (variable === 'temperature' ? 'GISTEMP v4, 1880\u20132026' : 'GPCP v2.3, 1979\u20132026') + seasonSuffix() + '\u2026');
   $('map-stats').textContent = 'Loading map\u2026';
   try {
-    const res = await fetch('/api/map?variable=' + variable);
-    mapData = await res.json();
-    if (mapData.error) {
-      $('map-stats').textContent = 'Error: ' + mapData.error;
+    const res = await fetch('/api/map?variable=' + variable + '&season=' + season);
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) {
+      /* Seasonal map missing (503) or any other map error: say so in
+         #map-stats and leave the previous map up — do not overwrite
+         mapData with the error payload. */
+      $('map-stats').textContent = 'Error: ' + (d.error || ('HTTP ' + res.status)) +
+        seasonSuffix() + ' \u2014 showing the previous map.';
       return;
     }
+    mapData = d;
     const url = paintOverlay();
     if (leafletMap && url) {
       if (overlay) overlay.setUrl(url);
@@ -1013,6 +1125,7 @@ async function loadMap() {
       if (primaryMarker) primaryMarker.addTo(leafletMap);
       if (compareMarker) compareMarker.addTo(leafletMap);
     }
+    renderLeaderboard();
   } finally {
     setMapLoading(false);
   }
@@ -1173,6 +1286,7 @@ async function selectPrimary(lat, lon) {
   renderCellChart();
   renderComparePanel();
   placeMarkers();
+  loadDecadesCell(primaryCell.lat, primaryCell.lon);
 }
 async function selectCompare(lat, lon) {
   const d = await fetchCell(lat, lon);
@@ -1280,7 +1394,246 @@ mapVarSel.addEventListener('change', async () => {
   await loadMap();
   placeMarkers();
   if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
+  loadDecadesGlobal();
+  loadChangepoint();
 });
+seasonSel.addEventListener('change', async () => {
+  /* Season change mirrors the variable change: it ends any comparison
+     (the pinned cell was measured under the old season) and re-fetches
+     the inspected cell, if any, under the new season. */
+  compareCell = null; compareArmed = false;
+  $('compare-clear').hidden = true; $('compare-hint').hidden = true;
+  $('compare-pin').textContent = 'Pin a second cell to compare';
+  renderComparePanel();
+  hideStoryPhoto();
+  updateSeasonLabel();
+  await loadMap();
+  placeMarkers();
+  if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
+  loadDecadesGlobal();
+  loadChangepoint();
+});
+
+/* ---------- More places (verified cells only) ----------
+   Sahara (23, 13) has no GISTEMP data (n = 0), so it has no chip. */
+document.querySelectorAll('.preset[data-place-lat]').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    const lat = parseFloat(chip.dataset.placeLat);
+    const lon = parseFloat(chip.dataset.placeLon);
+    setPresetNote(chip.textContent + ' (' + fmtLatLon(lat, lon) + ') \u2014 grid-cell trend, temperature.');
+    gotoCell(lat, lon, 'temperature');
+  });
+});
+
+/* ---------- Is it speeding up? (decade-by-decade trends) ----------
+   Served by /api/decades (backend lands separately). A failed fetch
+   shows a short note in the section and never breaks the page. */
+const decadesState = { chart: null, globalToken: 0, cellToken: 0 };
+function decadesRowsHTML(d) {
+  return d.decades.map((row) =>
+    '<tr><td>' + row.decade + '</td>' +
+    '<td class="num">' + (row.slope_per_decade === null || row.slope_per_decade === undefined
+      ? '\u2014' : fmtSigned(row.slope_per_decade) + ' ' + d.unit + '/decade') + '</td>' +
+    '<td>' + fmtP(row.p_value) + '</td>' +
+    '<td>' + (row.significant ? 'Yes' : 'No') + '</td>' +
+    '<td class="num">' + row.n + '</td></tr>'
+  ).join('');
+}
+function renderDecadesChart(d) {
+  if (!CHART_OK) return;
+  const labels = d.decades.map((r) => r.decade);
+  const data = d.decades.map((r) =>
+    (r.slope_per_decade === null || r.slope_per_decade === undefined) ? null : r.slope_per_decade);
+  const colours = data.map((v) => v === null ? '#c9ced3' : (v >= 0 ? '#b2182b' : '#2166ac'));
+  if (decadesState.chart) decadesState.chart.destroy();
+  const opts = baseChartOptions(d.unit + ' / decade', 'top');
+  opts.plugins.legend.display = false;
+  decadesState.chart = new Chart($('decades-chart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Slope per decade (' + d.unit + ')', data, backgroundColor: colours }] },
+    options: opts,
+  });
+}
+async function loadDecadesGlobal() {
+  const token = ++decadesState.globalToken;
+  const note = $('decades-note');
+  try {
+    const res = await fetch('/api/decades?variable=' + mapVarSel.value);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (token !== decadesState.globalToken) return;
+    if (d.error) throw new Error(d.error);
+    note.hidden = true;
+    $('decades-tbody').innerHTML = decadesRowsHTML(d);
+    renderDecadesChart(d);
+  } catch (err) {
+    if (token !== decadesState.globalToken) return;
+    note.hidden = false;
+    note.textContent = 'Decade-by-decade trends are not available yet (' + err.message +
+      '). The full-period map and cell inspector above still work.';
+  }
+}
+async function loadDecadesCell(lat, lon) {
+  const token = ++decadesState.cellToken;
+  const block = $('decades-cell-block');
+  const errEl = $('decades-cell-error');
+  try {
+    const res = await fetch('/api/decades?variable=' + mapVarSel.value + '&lat=' + lat + '&lon=' + lon);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (token !== decadesState.cellToken) return;
+    if (d.error) throw new Error(d.error);
+    $('decades-cell-note').textContent = d.label + ' \u2014 same decades';
+    $('decades-cell-tbody').innerHTML = decadesRowsHTML(d);
+    errEl.hidden = true;
+    block.hidden = false;
+  } catch (err) {
+    if (token !== decadesState.cellToken) return;
+    $('decades-cell-note').textContent = 'Cell ' + lat + '\u00B0, ' + lon + '\u00B0 \u2014 same decades';
+    $('decades-cell-tbody').innerHTML = '';
+    errEl.hidden = false;
+    errEl.textContent = 'Decade-by-decade trends for this cell are not available yet (' +
+      err.message + ').';
+    block.hidden = false;
+  }
+}
+
+/* ---------- Change-point callout ----------
+   Served by /api/changepoint (backend lands separately). */
+async function loadChangepoint() {
+  const el = $('changepoint-callout');
+  const variable = mapVarSel.value;
+  const unit = unitFor(variable);
+  try {
+    const res = await fetch('/api/changepoint?variable=' + variable);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    if (d.supported && d.break_year !== null && d.break_year !== undefined && d.before && d.after) {
+      el.textContent = (variable === 'temperature' ? 'Warming accelerated' : 'The trend shifted') +
+        ' around ' + d.break_year + ': ' +
+        fmtSigned(d.before.slope_per_decade) + ' ' + unit + '/decade before, ' +
+        fmtSigned(d.after.slope_per_decade) + ' ' + unit + '/decade after.';
+    } else {
+      el.textContent = variable === 'temperature'
+        ? 'No clear single break in the warming trend \u2014 the rise has been steadier than one jump.'
+        : 'No clear single break in the trend \u2014 the change has been steadier than one jump.';
+    }
+  } catch (err) {
+    el.textContent = 'Change-point check is not available yet (' + err.message +
+      ') \u2014 the full-period trend is still the result to trust.';
+  }
+}
+
+/* ---------- Arctic sea ice (third variable: a line chart, not a map) ---------- */
+let seaiceChart = null;
+async function loadSeaice() {
+  const note = $('seaice-note');
+  const verdictEl = $('seaice-verdict');
+  try {
+    const res = await fetch('/api/seaice');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    if (!CHART_OK) {
+      note.hidden = false;
+      note.textContent = 'Charts need the Chart.js library, which failed to load.';
+      verdictEl.textContent = d.verdict;
+      return;
+    }
+    const opts = baseChartOptions('million km²', 'bottom');
+    if (seaiceChart) seaiceChart.destroy();
+    seaiceChart = new Chart($('seaice-chart'), {
+      type: 'line',
+      data: {
+        labels: d.years,
+        datasets: [
+          { label: 'September (minimum)', data: d.september,
+            borderColor: '#1d5fa8', backgroundColor: 'rgba(29,95,168,0.08)',
+            pointRadius: 1, pointBackgroundColor: '#1d5fa8', tension: 0.1 },
+          { label: 'March (maximum)', data: d.march,
+            borderColor: '#8a97a5', backgroundColor: 'rgba(138,151,165,0.08)',
+            pointRadius: 1, pointBackgroundColor: '#8a97a5', tension: 0.1 },
+        ],
+      },
+      options: opts,
+    });
+    verdictEl.textContent = d.verdict + ' March maximum: ' +
+      fmtSigned(d.trends.march.slope_per_decade) +
+      ' million km²/decade (' + fmtP(d.trends.march.p_value) + ').';
+  } catch (err) {
+    note.hidden = false;
+    note.textContent = 'Sea ice data is not available yet (' + err.message + ').';
+    verdictEl.textContent = '';
+  }
+}
+
+/* ---------- Leaderboard (computed in the browser from mapData) ---------- */
+function renderLeaderboard() {
+  const tbody = $('leaderboard-tbody');
+  const note = $('leaderboard-note');
+  const title = $('leaderboard-title');
+  if (!mapData) {
+    tbody.innerHTML = '';
+    note.hidden = false;
+    note.textContent = 'Map still loading \u2014 the leaderboard appears once the trend map arrives.';
+    return;
+  }
+  const isTemp = mapVarSel.value === 'temperature';
+  const groups = isTemp
+    ? [{ key: 'warming', label: 'Fastest warming', dir: -1 },
+       { key: 'cooling', label: 'Fastest cooling', dir: 1 }]
+    : [{ key: 'wetting', label: 'Wetting most', dir: -1 },
+       { key: 'drying', label: 'Drying most', dir: 1 }];
+  const cells = [];
+  for (let i = 0; i < mapData.lat.length; i++) {
+    for (let j = 0; j < mapData.lon.length; j++) {
+      const s = mapData.slope_per_decade[i][j];
+      if (s === null || s === undefined || !mapData.significant[i][j]) continue;
+      cells.push({ lat: mapData.lat[i], lon: normLon(mapData.lon[j]),
+        slope: s, p: mapData.p_value[i][j], q: mapData.q_value[i][j] });
+    }
+  }
+  title.textContent = isTemp
+    ? 'Leaderboard: the fastest-changing cells'
+    : 'Leaderboard: the wettest and driest trends';
+  let html = '';
+  const counts = {};
+  groups.forEach((g) => {
+    const sorted = cells.slice()
+      .sort((a, b) => (g.dir === -1 ? b.slope - a.slope : a.slope - b.slope))
+      .slice(0, 10);
+    counts[g.key] = sorted.length;
+    html += '<tr class="lb-group"><td colspan="5">' + g.label + '</td></tr>';
+    sorted.forEach((c, idx) => {
+      html += '<tr class="row-clickable" data-lat="' + c.lat + '" data-lon="' + c.lon +
+        '" title="Click to fly to this cell"><td>' + (idx + 1) + '</td>' +
+        '<td>' + fmtLatLon(c.lat, c.lon) + '</td>' +
+        '<td class="num">' + fmtSigned(c.slope) + ' ' + mapData.unit + '/decade</td>' +
+        '<td>' + fmtP(c.p) + '</td><td>' + fmtQ(c.q) + '</td></tr>';
+    });
+  });
+  tbody.innerHTML = html;
+  tbody.querySelectorAll('tr.row-clickable').forEach((tr) => {
+    tr.addEventListener('click', () =>
+      gotoCell(parseFloat(tr.dataset.lat), parseFloat(tr.dataset.lon), mapVarSel.value));
+  });
+  if (!cells.length) {
+    note.hidden = false;
+    note.textContent = 'No significant cells for this map \u2014 nothing qualifies for the leaderboard yet.';
+    return;
+  }
+  const short = groups
+    .filter((g) => counts[g.key] < 10)
+    .map((g) => g.label + ': only ' + counts[g.key] + ' cell' + (counts[g.key] === 1 ? '' : 's') + ' qualify');
+  if (short.length) {
+    note.hidden = false;
+    note.textContent = 'Fewer than 10 cells qualify \u2014 ' + short.join('; ') + '. Showing all that qualify.';
+  } else {
+    note.hidden = true;
+    note.textContent = '';
+  }
+}
 
 wireZoom($('chart'), () => seriesState.chart);
 wireZoom($('cell-chart'), () => cellState.chart);
@@ -1293,7 +1646,11 @@ syncChips();
 loadSeries();
 loadSummary();
 initLeaflet();
+updateSeasonLabel();
 loadMap();
+loadDecadesGlobal();
+loadChangepoint();
+loadSeaice();
 </script>
 </body>
 </html>

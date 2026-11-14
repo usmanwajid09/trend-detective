@@ -134,37 +134,112 @@ Temperature cells are untested where the early record is too sparse
 (< 10 years of data). The median significant warming cell warms at about
 +0.17 °C/decade; the fastest cells (Arctic) approach +1 °C/decade.
 
+### Is it speeding up? Decadal trends and the change-point
+
+The same Mann-Kendall + Sen's-slope test, run per decade on the global
+mean series (endpoint `/api/decades`):
+
+| Decade | Change / decade | p | Verdict |
+|---|---|---|---|
+| 1980s | +0.10 °C | 0.53 | Not significant |
+| 1990s | +0.14 °C | 0.28 | Not significant |
+| 2000s | +0.16 °C | 0.07 | Not significant |
+| 2010s | **+0.36 °C** | 0.012 | Significant |
+| 2020s (partial, n = 6) | +0.68 °C | 0.13 | Not significant |
+
+No single 10-year decade before the 2010s is significant on its own —
+the signal only emerges over longer windows — but the slope climbs every
+decade. A change-point scan (CUSUM on the residuals of a straight-line
+fit, support judged by a 2,000-shuffle permutation test, p = 0.0005)
+says **warming accelerated around the year 2000: +0.055 °C/decade before
+(1880–1999), +0.26 °C/decade after (2000–2025) — about 4.8× faster**.
+Honest caveat: the CUSUM peak marks where the series crosses its
+single-line fit, not the exact year the slope changed, so "around 2000"
+is the claim, not "in 2000". The acceleration itself (0.055 → 0.26) is
+unambiguous. The same decades table is shown for any inspected cell:
+Lahore's cell (31°N, 75°E) has no significant decade on its own
+(+0.55, +0.29, +0.01, −0.03, +1.54 for 2020s, n = 7) — its warming
+only shows over the full 1880–2026 record (+0.12 °C/decade).
+
+### Seasons and the leaderboard
+
+Season selector next to the variable selector repaints the map from
+precomputed seasonal trend maps (DJF/MAM/JJA/SON, both variables,
+`/api/map?season=`). Winter shows the Arctic amplification plainly: the
+fastest-warming DJF cell is **+1.64 °C/decade at 81°N, 19°E, versus
++0.99 °C/decade annual at the same cell — winter warming ~1.7× the
+annual rate** (1,054 significant Arctic cells in DJF). At that cell the
+other seasons are MAM +0.75, JJA +0.78, SON +1.09 °C/decade.
+
+The leaderboard (computed in the browser from the map payload,
+BH-significant cells only, click a row to fly to the cell):
+
+| Group | Top cell | Slope / decade |
+|---|---|---|
+| Fastest warming | 81°N, 21–25°E (Arctic) | +0.99 °C |
+| Fastest cooling | 9°S, 53°W (S Atlantic) | −0.47 °C |
+| Wetting most | 8.75°N, 73.75°W (Caribbean) | +0.46 mm/day |
+| Drying most | 18.75°N, 156.25°W (C Pacific) | −0.79 mm/day |
+
+New preset chips fly to Karachi, Islamabad, London, Tokyo, Sydney, the
+Arctic (81°N, 19°E) and the Amazon (−3°, −60°). Sahara (23°N, 13°E)
+has no chip: its GISTEMP cell has no data at all (n = 0), so it was
+dropped rather than shown empty.
+
+### The ice agrees (third variable: sea ice)
+
+Arctic sea ice extent, NSIDC Sea Ice Index Version 4, 1979–2025
+(endpoint `/api/seaice`):
+
+| Series | 1979 | 2025 | Change / decade | p |
+|---|---|---|---|---|
+| September (minimum) | 7.05 M km² | 4.75 M km² | −0.74 M km² | ~6×10⁻¹² |
+| March (maximum) | 16.34 M km² | 14.12 M km² | −0.38 M km² | ~2×10⁻¹² |
+| Annual mean | 12.35 M km² | 10.15 M km² | −0.51 M km² | ~2×10⁻⁹ |
+
+Record-low September: 3.57 M km² in 2012. The sea-ice loss is a third,
+independent witness to the same warming — not a map, one line chart.
+
 ## 60-second demo script
 
 1. Open the page. "This is Trend Detective — it answers what is changing,
    where, how much, and whether it is significant, using real NASA data."
 2. Select **Global → Temperature**. "The planet has warmed 0.21 °C per
    decade since 1981 — highly significant, p is essentially zero."
-3. Switch region to **Reykjavik**. "Iceland warmed at almost exactly the
-   global rate, +0.19 °C per decade."
+3. Scroll to **"Is it speeding up?"** "And it is speeding up. In the
+   1980s the planet warmed 0.10 °C per decade; in the 2010s, 0.36. Our
+   change-point scan says warming accelerated around the year 2000 —
+   from 0.05 °C a decade before, to 0.26 after. Nearly five times faster."
 4. Switch region to **Lahore**. "Here's the honest complication: the POWER
    point series says Lahore shows no significant warming — minus 0.06 °C per
    decade, p = 0.52. But the GISTEMP map cell for Lahore says it *is*
    warming, +0.25 °C per decade, highly significant — and so do all eight
-   neighbouring cells. Two real NASA datasets, two different answers for the
-   same city."
-5. Switch variable to **Precipitation** (still Lahore). "What *is* changing
-   in Lahore is the rain: significantly wetter, +0.15 mm per day per decade."
-6. Scroll to the summary table, then the **global trend map**. "This is the
-   whole planet, one honest test per cell — 6,170 cells warming, only 86
-   cooling, after correcting for false discoveries. Click Lahore on the map
-   and you get its full series with the trend line and confidence band."
+   neighbouring cells. Two real NASA datasets, two different answers for
+   the same city."
+5. Scroll to the **leaderboard**. "The fastest-warming place on Earth is
+   the Arctic, 81° North — almost +1 °C per decade. Switch the season to
+   Winter and it is +1.6. Click any row and you fly straight to that cell."
+   Then the ice: "And the ice agrees — September Arctic sea ice has
+   shrunk from 7.1 to 4.8 million square kilometres since 1979, losing
+   about three-quarters of a million per decade."
+6. End on the **global trend map**. "The whole planet, one honest test per
+   cell — 6,170 cells warming, only 86 cooling, after correcting for false
+   discoveries. Click anywhere and you get its full series with the trend
+   line and confidence band."
 
 ## Project layout
 
 ```
 app.py            Flask app (routes + API: /api/series, /api/summary,
-                  /api/map, /api/cell)
+                  /api/map, /api/cell, /api/decades, /api/changepoint,
+                  /api/seaice)
 src/
   data.py         loads the cached NASA datasets
   trends.py       OLS trend + p-value + plain-language verdict
   fetch_data.py   re-downloads the datasets from NASA (--grid for NetCDF)
   grid.py         gridded loaders, seasons, cache build, trend maps
+  changepoint.py  CUSUM change-point scan + permutation test
+  seaice.py       NSIDC Sea Ice Index monthly CSVs -> extent cache
 stats/
   mannkendall.py  Mann-Kendall + Sen's slope, Hamed-Rao/Yue-Wang
                   corrections, vectorised grid version
@@ -173,8 +248,9 @@ templates/        index.html (Chart.js chart, selectors, summary table, map)
 static/           style.css
 data/             cached real downloads (POWER JSON x2, GISTEMP CSV)
 data/grid/        committed caches: annual means + precomputed trend maps
+                  (annual + seasonal DJF/MAM/JJA/SON, both variables)
 data/raw/         raw NetCDF (git-ignored, re-downloadable)
-tests/            pytest: trend maths + Flask routes (51 tests)
+tests/            pytest: trend maths + Flask routes (87 tests)
 .github/workflows/ci.yml   pytest on every push
 ```
 
@@ -189,5 +265,8 @@ disclosure of AI tools used — this line is that disclosure.
 - Record the demo video and submit the project for judging (submissions
   close Sunday 23:59 local time). The demo script above is written for the
   current build.
-- Milestones 3–6 from the implementation plan are not started (time
-  controls, sea ice / sea level, contradictions, final polish).
+- Milestones 3–4 from the implementation plan are done (time controls:
+  decades + season selector + change-point; more variables: leaderboard
+  and sea ice; Milestone 3's year-window slider already existed via
+  /api/map). Still open: Milestones 5–6 (contradictions/report export,
+  final polish).
