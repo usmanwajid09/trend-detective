@@ -23,7 +23,7 @@ python3 -m venv .venv
 # open http://127.0.0.1:5000
 ```
 
-Tests: `.venv/bin/python -m pytest tests/ -q` (117 tests, all passing).
+Tests: `.venv/bin/python -m pytest tests/ -q` (126 tests, all passing).
 
 To re-download the data: `.venv/bin/python -m src.fetch_data`
 (it only writes real downloads — a failed download is reported, never faked).
@@ -260,7 +260,7 @@ data/             cached real downloads (POWER JSON x2, GISTEMP CSV)
 data/grid/        committed caches: annual means + precomputed trend maps
                   (annual + seasonal DJF/MAM/JJA/SON, both variables)
 data/raw/         raw NetCDF (git-ignored, re-downloadable)
-tests/            pytest: trend maths + Flask routes (117 tests)
+tests/            pytest: trend maths + Flask routes (126 tests)
 .github/workflows/ci.yml   pytest on every push
 ```
 
@@ -306,4 +306,25 @@ disclosure of AI tools used — this line is that disclosure.
   The overlay painting was verified gapless against the real grids
   (Python reproduction): the edge strip seen when zoomed was the solid
   grey blocks plus unloaded tile placeholders, not a painting seam.
+- Second fix round after a second live visual check (2026-11-14): the
+  translucent grey still read as solid blocks over the very light
+  basemap, so non-significant cells now paint nothing at all — only
+  significant cells are coloured, and the legend/intro say so ("Only
+  cells with a significant trend are coloured; everywhere else you see
+  the basemap"). Country labels and borders now come from Esri World
+  Light Gray Reference tiles in a pane above the trend overlay (the
+  Natural Earth GeoJSON borders layer is removed), and the overlay
+  opacity is 1.0. Hotspot tables dropped the two q columns (p stays) so
+  both tables fit at desktop width without an inner scrollbar. The
+  leaderboard filters by sign — "Fastest cooling" can no longer list
+  warming cells when a short window has fewer than 10 cooling cells
+  (tested in node against the shipped JS, see tests/test_leaderboard_js.py).
+  `/api/cell` accepts `start_year`/`end_year`: the selected-cell panel
+  follows the active map window (trend, q and trend line over the window;
+  too few years in the window falls back to the full record with a note).
+  The key-findings count-up animation is deleted entirely — the numbers
+  are static final values under the "Warming up the data…" cover, so a
+  recording can never capture an intermediate value. The year-window
+  label's initial text is "1880–2026" (it used to read "1880–…" until
+  the script ran).
   Still open: Milestone 6 (final polish).

@@ -52,22 +52,22 @@
   <section class="findings" aria-label="Key findings">
     <div class="findings-loading" id="findings-loading"><span class="spinner" aria-hidden="true"></span><span>Warming up the data&hellip;</span></div>
     <div class="fact">
-      <div class="fact-num"><span data-count="0.212" data-decimals="3" data-prefix="+">+0.212</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-num"><span>+0.212</span> <span class="fact-unit">&deg;C / decade</span></div>
       <div class="fact-label">Global warming, 1981&ndash;2025</div>
       <div class="fact-note">Significant &middot; p &asymp; 6&times;10<sup>&minus;21</sup></div>
     </div>
     <div class="fact">
-      <div class="fact-num"><span data-count="0.194" data-decimals="3" data-prefix="+">+0.194</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-num"><span>+0.194</span> <span class="fact-unit">&deg;C / decade</span></div>
       <div class="fact-label">Reykjavik warming, 1981&ndash;2024</div>
       <div class="fact-note">Significant &middot; p = 0.0009</div>
     </div>
     <div class="fact fact-disagree">
-      <div class="fact-num fact-num-small"><span data-count="-0.061" data-decimals="3">-0.061</span><span class="fact-vs">vs</span><span data-count="0.25" data-decimals="2" data-prefix="+">+0.25</span> <span class="fact-unit">&deg;C / decade</span></div>
+      <div class="fact-num fact-num-small"><span>-0.061</span><span class="fact-vs">vs</span><span>+0.25</span> <span class="fact-unit">&deg;C / decade</span></div>
       <div class="fact-label">Lahore temperature, 1981&ndash;2024: two datasets, two answers</div>
       <div class="fact-note">POWER: no trend (p = 0.53) &middot; GISTEMP cell: warming (p &asymp; 6&times;10<sup>&minus;5</sup>)</div>
     </div>
     <div class="fact">
-      <div class="fact-num"><span data-count="0.153" data-decimals="3" data-prefix="+">+0.153</span> <span class="fact-unit">mm/day / decade</span></div>
+      <div class="fact-num"><span>+0.153</span> <span class="fact-unit">mm/day / decade</span></div>
       <div class="fact-label">Lahore rainfall, 1981&ndash;2024</div>
       <div class="fact-note">Significant &middot; p = 0.016</div>
     </div>
@@ -79,8 +79,9 @@
       <h2 id="map-heading">Global trend map</h2>
       <p>Every cell is one Mann-Kendall trend test. Coloured cells passed the
       Benjamini-Hochberg check &mdash; a coloured cell is one you can trust.
-      Pale grey cells were tested but are not significant; blank areas have too
-      little data. <strong>Click any cell to inspect it.</strong></p>
+      Only cells with a significant trend are coloured; everywhere else you
+      see the basemap (areas with too little data are blank too).
+      <strong>Click any cell to inspect it.</strong></p>
     </div>
 
     <div class="map-toolbar">
@@ -102,7 +103,7 @@
       <label class="toolbar-label slider-label">Map window &mdash; start year
         <span class="slider-row">
           <input type="range" id="year-start-slider" min="1880" max="2016" step="1" value="1880" aria-label="Start year of the map window" title="Windows need at least 10 years of data, so the latest start year is 2016.">
-          <output id="year-window-label" for="year-start-slider">1880&ndash;&hellip;</output>
+          <output id="year-window-label" for="year-start-slider">1880&ndash;2026</output>
         </span>
       </label>
       <p class="note" id="year-window-note" role="status" hidden></p>
@@ -147,8 +148,7 @@
             <span class="legend-item">Warming / wetter</span>
           </span>
           <span class="legend-item">White = no change (0)</span>
-          <span class="legend-item"><span class="swatch swatch-nosig"></span>Tested, not significant</span>
-          <span class="legend-item"><span class="swatch" style="background:transparent;border:1px solid #8a97a5"></span>No data</span>
+          <span class="legend-item">Uncoloured: not significant, or too little data</span>
         </div>
         <p id="map-stats" class="map-stats" role="status">Loading map&hellip;</p>
       </div>
@@ -281,7 +281,7 @@
         <h3>Drought risk</h3>
         <div class="table-wrap">
           <table class="hotspots-table" id="hotspots-drought-table">
-            <thead><tr><th>Place</th><th>Temp &deg;C / dec</th><th>Precip mm/day / dec</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
+            <thead><tr><th>Place</th><th>Temp &deg;C / dec</th><th>Precip mm/day / dec</th><th>Temp p</th><th>Precip p</th></tr></thead>
             <tbody id="hotspots-drought-tbody"></tbody>
           </table>
         </div>
@@ -290,7 +290,7 @@
         <h3>Flood risk</h3>
         <div class="table-wrap">
           <table class="hotspots-table" id="hotspots-flood-table">
-            <thead><tr><th>Place</th><th>Temp &deg;C / dec</th><th>Precip mm/day / dec</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
+            <thead><tr><th>Place</th><th>Temp &deg;C / dec</th><th>Precip mm/day / dec</th><th>Temp p</th><th>Precip p</th></tr></thead>
             <tbody id="hotspots-flood-tbody"></tbody>
           </table>
         </div>
@@ -456,8 +456,9 @@
           gridded &mdash; 2&deg; temperature anomaly maps, 1880&ndash;2026.</li>
           <li><a href="https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc">GPCP v2.3</a>
           &mdash; 2.5&deg; precipitation maps, 1979&ndash;2026.</li>
-          <li>Country borders on the map &mdash; Natural Earth polygons
-          (public domain), drawn as a thin outline so the geography stays readable.</li>
+          <li>Country labels and borders on the map &mdash; Esri World Light
+          Gray Reference tiles, drawn above the trend colours so the
+          geography stays readable at every zoom.</li>
         </ul>
         <p>Each map cell gets a <strong>Mann-Kendall test</strong> with
         <strong>Sen&rsquo;s slope</strong> (the median of all pairwise slopes, so one
@@ -668,29 +669,14 @@ function mannKendallSen(years, values, startYear, endYear) {
   };
 }
 
-/* ---------- Animated counters (key-findings strip) ---------- */
-function animateCounters() {
-  document.querySelectorAll('[data-count]').forEach((el) => {
-    const target = parseFloat(el.dataset.count);
-    const decimals = parseInt(el.dataset.decimals || '3', 10);
-    const prefix = el.dataset.prefix || '';
-    const start = performance.now(), dur = 900;
-    function tick(now) {
-      const t = Math.min(1, (now - start) / dur);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const v = target * eased;
-      el.textContent = prefix + v.toFixed(decimals);
-      if (t < 1) requestAnimationFrame(tick);
-      else el.textContent = prefix + target.toFixed(decimals);
-    }
-    requestAnimationFrame(tick);
-  });
-}
-/* Keep the final values even if animation is interrupted. */
-document.querySelectorAll('[data-count]').forEach((el) => {
-  el.dataset.final = (el.dataset.prefix || '') +
-    parseFloat(el.dataset.count).toFixed(parseInt(el.dataset.decimals || '3', 10));
-});
+/* ---------- Key-findings strip ---------- */
+/* The numbers are baked into the HTML at their final, verified values
+   — there is intentionally no count-up animation. Animating 0 to the
+   target over ~1 s meant a recording or screenshot taken in the first
+   second captured wrong intermediate numbers (e.g. +0.065 instead of
+   the real +0.212). The "Warming up the data…" overlay (see
+   hideFindingsLoading) covers the strip until the first live fetch
+   resolves, so no number is ever visible before it is real. */
 
 /* ---------- Zoomable Chart.js charts ---------- */
 function wireZoom(canvas, getChart) {
@@ -780,9 +766,14 @@ function trendLineDatasets(d, colour, tag) {
   /* Draw the line only over years the cell actually has data. Drawing it
      across the whole axis extrapolates far beyond the fitted window
      (a cell with 52 years of data would get a line spanning 147 years),
-     which stretched the y-axis and flattened the series. */
+     which stretched the y-axis and flattened the series. When the
+     headline trend covers a map window (d.trend_years), the line is
+     drawn only inside that window — extrapolating a 2016–2026 slope
+     back to 1880 would show a trend the panel never computed. */
+  const ty = (d.trend_years && d.trend_years.length === 2) ? d.trend_years : null;
   const line = (s) => d.years.map((y, i) =>
-    (d.values[i] === null || d.values[i] === undefined)
+    (d.values[i] === null || d.values[i] === undefined ||
+     (ty && (y < ty[0] || y > ty[1])))
       ? null
       : d.trend.median_value + s * (y - d.trend.median_year));
   return [
@@ -807,11 +798,9 @@ function hideFindingsLoading() {
   findingsLoadingHidden = true;
   const el = $('findings-loading');
   if (el) el.style.display = 'none';
-  /* The counters only start now, once at least one live fetch has
-     resolved — starting them at page load meant a recording (or a
-     screenshot) taken in the first second captured wrong intermediate
-     numbers like +0.134 instead of the real +0.212. */
-  animateCounters();
+  /* The key-findings numbers are static in the HTML at their final
+     values — nothing animates them, so the moment this cover lifts
+     the numbers shown are the real ones. */
 }
 
 /* Render the record years from a payload's "records" field, if present.
@@ -1061,35 +1050,17 @@ function updateSeasonLabel() {
 function unitFor(variable) { return variable === 'precipitation' ? 'mm/day' : '\u00B0C'; }
 const mapTooltip = $('map-tooltip');
 let mapData = null;
-let leafletMap = null, overlay = null, bordersLayer = null;
-/* Country borders drawn ABOVE the trend overlay so the geography stays
-   readable at world zoom: Natural Earth country polygons as GeoJSON,
-   fetched at runtime. The map works without them — if the fetch fails
-   the borders are simply absent, with no error shown to the user. */
-const BORDERS_URLS = [
-  'https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json',
-  'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json',
-];
-async function loadBorders() {
-  if (!leafletMap || bordersLayer) return;
-  for (const url of BORDERS_URLS) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const geojson = await res.json();
-      if (!geojson || !Array.isArray(geojson.features)) continue;
-      bordersLayer = L.geoJSON(geojson, {
-        style: { color: '#1f2933', weight: 1, opacity: 0.6,
-          fillOpacity: 0, interactive: false },
-      });
-      bordersLayer.addTo(leafletMap);
-      bordersLayer.bringToFront();
-      return;
-    } catch (err) {
-      /* Try the next mirror; if all fail, the map works without borders. */
-    }
-  }
-}
+let leafletMap = null, overlay = null;
+/* Country labels and borders come from Esri's World Light Gray
+   Reference tiles, drawn in a custom pane ABOVE the trend overlay
+   (a normal tileLayer would sit in the tile pane, below the overlay,
+   and the labels would be hidden under it exactly as the basemap
+   labels were). The reference tiles are transparent apart from the
+   labels and boundaries, so they never hide the trend colours. This
+   replaces the Natural Earth GeoJSON borders layer (removed
+   2026-11-14): one border style, from the same source as the base. */
+const REFERENCE_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
 let primaryMarker = null, compareMarker = null;
 let primaryCell = null;   /* {lat, lon, payload} */
 let compareCell = null;   /* {lat, lon, payload} or null */
@@ -1119,7 +1090,15 @@ function slopeColor(slope, maxAbs) {
    whole canvas with no seam or gap at the antimeridian or the poles —
    a Python reproduction against the real grids (2026-11-14) confirmed
    full coverage; the old fixed 4.5 px rects already covered, but
-   edge-anchored rects make it structural instead of lucky. */
+   edge-anchored rects make it structural instead of lucky.
+   Only significant cells are painted at all: a translucent grey for
+   tested-but-not-significant cells read as solid grey blocks over the
+   very light basemap, and near-zero significant cells already paint
+   near-white — between them nearly every pixel was covered and the
+   basemap (labels included) was hidden almost everywhere. Leaving
+   non-significant cells transparent keeps the basemap visible and the
+   map honest: colour means "significant", nothing else. The tested /
+   significant counts stay in #map-stats, so no information is lost. */
 function paintOverlay() {
   if (!mapData) return null;
   const nLat = mapData.lat.length, nLon = mapData.lon.length;
@@ -1151,11 +1130,13 @@ function paintOverlay() {
            and read as an unfinished pale wash. */
         continue;
       }
-      /* Tested but not significant: a translucent grey, so the basemap
-         shows through — the old solid #8a97a5 read as splotchy grey
-         blocks, worst at the map's edge when zoomed. */
-      mapCtx.fillStyle = mapData.significant[i][j]
-        ? slopeColor(s, maxAbs) : 'rgba(138,151,165,0.28)';
+      /* Tested but not significant: paint nothing either. A translucent
+         grey still read as solid grey blocks over the very light
+         basemap, and the legend now says so honestly ("Uncoloured:
+         not significant, or too little data"). Only significant cells
+         get colour — colour means "significant", nothing else. */
+      if (!mapData.significant[i][j]) continue;
+      mapCtx.fillStyle = slopeColor(s, maxAbs);
       const x0 = xLeft(mapData.lon[j]), x1 = xRight(mapData.lon[j]);
       mapCtx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
     }
@@ -1214,10 +1195,14 @@ function initLeaflet() {
     maxZoom: 16,
     keepBuffer: 2,
   }).addTo(leafletMap);
-  leafletMap.on('mousemove', onMapMouseMove);
-  leafletMap.on('mouseout', () => { mapTooltip.hidden = true; });
-  leafletMap.on('click', onMapClick);
-  loadBorders();
+  const refPane = leafletMap.createPane('referencePane');
+  refPane.style.zIndex = 450; /* tile 200 < overlay 400 < reference 450 < markers 600 */
+  L.tileLayer(REFERENCE_URL, {
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, FAO, NOAA, USGS',
+    maxZoom: 16,
+    keepBuffer: 2,
+    pane: 'referencePane',
+  }).addTo(leafletMap);
 }
 
 function nearestCell(lat, lng) {
@@ -1323,14 +1308,16 @@ async function loadMap(loadingText) {
     if (leafletMap && overlayUrl) {
       if (overlay) overlay.setUrl(overlayUrl);
       else {
-        overlay = L.imageOverlay(overlayUrl, [[-90, -180], [90, 180]], { opacity: 0.88, interactive: false });
+        /* Opacity 1.0: the canvas alpha already controls the blending —
+           only significant cells are painted, everything else is
+           transparent, so dimming the whole overlay would only wash
+           the real colours out. The reference pane (labels/borders)
+           sits above it by pane z-index, no bringToFront needed. */
+        overlay = L.imageOverlay(overlayUrl, [[-90, -180], [90, 180]], { opacity: 1.0, interactive: false });
         overlay.addTo(leafletMap);
       }
       if (primaryMarker) primaryMarker.addTo(leafletMap);
       if (compareMarker) compareMarker.addTo(leafletMap);
-      /* The repainted overlay lands last in its pane, so keep the
-         country borders on top of it. */
-      if (bordersLayer) bordersLayer.bringToFront();
     }
     renderLeaderboard();
     return 'ok';
@@ -1441,11 +1428,19 @@ function showCell(d) {
       fmtSigned(d.trend.ci_hi_per_decade) + ') \u00B7 ' +
       fmtP(d.trend.p_value) +
       (d.trend.q_value !== null && d.trend.q_value !== undefined
-        ? ' \u00B7 ' + fmtQ(d.trend.q_value) : '') : '');
+        ? ' \u00B7 ' + fmtQ(d.trend.q_value) : '') : '') +
+    (d.window_note ? ' \u00B7 ' + d.window_note : '');
   showRecords($('cell-records'), d.records, mapVarSel.value, d.unit);
   if (d.trend) {
+    /* The label names the years the headline slope actually covers:
+       the map window when one is active, the full record otherwise.
+       trend_years comes from /api/cell; older payloads fall back to
+       the series years. A stale "1880–2026" label on a 2016–2026
+       slope used to confuse viewers of the windowed map. */
+    const ty = (d.trend_years && d.trend_years.length === 2)
+      ? d.trend_years : [d.years[0], d.years[d.years.length - 1]];
     $('cell-chip-slope-label').textContent =
-      'Sen\u2019s slope \u00B7 ' + d.years[0] + '\u2013' + d.years[d.years.length - 1];
+      'Sen\u2019s slope \u00B7 ' + ty[0] + '\u2013' + ty[1];
     setChip('cell-chip-slope', fmtSigned(d.trend.slope_per_decade) + ' ' + d.unit + '/decade');
     setChip('cell-chip-p', fmtSci(d.trend.p_value));
     setChip('cell-chip-q', fmtSci(d.trend.q_value));
@@ -1477,7 +1472,15 @@ function showCell(d) {
     !(mapVarSel.value === 'temperature' && d.cell_lat === 31.0 && d.cell_lon === 75.0);
 }
 async function fetchCell(lat, lon) {
-  const res = await fetch('/api/cell?variable=' + mapVarSel.value + '&lat=' + lat + '&lon=' + lon);
+  /* The cell trend follows the active map window: pass the window so
+     /api/cell computes the trend (and q) over it instead of the full
+     record. No window means the full record, as before. */
+  let url = '/api/cell?variable=' + mapVarSel.value + '&lat=' + lat + '&lon=' + lon;
+  if (mapWindow.start) {
+    url += '&start_year=' + mapWindow.start;
+    if (mapWindow.end) url += '&end_year=' + mapWindow.end;
+  }
+  const res = await fetch(url);
   const d = await res.json();
   if (d.error) throw new Error(d.error);
   return d;
@@ -1817,6 +1820,7 @@ async function loadSeaice() {
    within minDeg degrees (latitude and longitude) of an already-picked
    cell, so the leaderboard reads as 10 distinct places instead of 10
    neighbouring grid cells. Longitude wraps at the antimeridian. */
+/* DEDUP-START */
 function dedupCells(sortedCells, minDeg) {
   const picked = [];
   for (const c of sortedCells) {
@@ -1832,6 +1836,36 @@ function dedupCells(sortedCells, minDeg) {
   }
   return picked;
 }
+/* DEDUP-END */
+
+/* LEADERBOARD-PURE-START — pure grouping logic, tested from
+   tests/test_leaderboard_js.py, which extracts this function (plus
+   dedupCells) and runs it in node against a 2016-window-shaped cell
+   list. Keep it side-effect free: it takes the significant-cell list
+   and returns the groups; renderLeaderboard does the DOM work. */
+function pickLeaderboardGroups(cells, isTemp) {
+  /* Each group filters by SIGN first: cooling/drying are only cells
+     with a negative slope, warming/wetting only positive ones.
+     Sorting the whole significant set and taking the top 10 used to
+     pad a short list with cells of the wrong sign — at the 2016
+     window only 3 cells genuinely cooled, and ranks 4–10 of "Fastest
+     cooling" were warming cells (+0.37 to +0.56 °C/decade). A short
+     group now shows fewer than 10 rows and the note says so. */
+  const groups = isTemp
+    ? [{ key: 'warming', label: 'Fastest warming', dir: -1, test: (s) => s > 0 },
+       { key: 'cooling', label: 'Fastest cooling', dir: 1, test: (s) => s < 0 }]
+    : [{ key: 'wetting', label: 'Wetting most', dir: -1, test: (s) => s > 0 },
+       { key: 'drying', label: 'Drying most', dir: 1, test: (s) => s < 0 }];
+  return groups.map((g) => ({
+    key: g.key,
+    label: g.label,
+    cells: dedupCells(
+      cells.filter((c) => g.test(c.slope))
+        .sort((a, b) => (g.dir === -1 ? b.slope - a.slope : a.slope - b.slope)),
+      4),
+  }));
+}
+/* LEADERBOARD-PURE-END */
 
 /* ---------- Leaderboard (computed in the browser from mapData) ---------- */
 function renderLeaderboard() {
@@ -1845,11 +1879,6 @@ function renderLeaderboard() {
     return;
   }
   const isTemp = mapVarSel.value === 'temperature';
-  const groups = isTemp
-    ? [{ key: 'warming', label: 'Fastest warming', dir: -1 },
-       { key: 'cooling', label: 'Fastest cooling', dir: 1 }]
-    : [{ key: 'wetting', label: 'Wetting most', dir: -1 },
-       { key: 'drying', label: 'Drying most', dir: 1 }];
   const cells = [];
   for (let i = 0; i < mapData.lat.length; i++) {
     for (let j = 0; j < mapData.lon.length; j++) {
@@ -1864,12 +1893,10 @@ function renderLeaderboard() {
     : 'Leaderboard: the wettest and driest trends';
   let html = '';
   const counts = {};
-  groups.forEach((g) => {
-    const sorted = dedupCells(cells.slice()
-      .sort((a, b) => (g.dir === -1 ? b.slope - a.slope : a.slope - b.slope)), 4);
-    counts[g.key] = sorted.length;
+  pickLeaderboardGroups(cells, isTemp).forEach((g) => {
+    counts[g.key] = g.cells.length;
     html += '<tr class="lb-group"><td colspan="5">' + g.label + '</td></tr>';
-    sorted.forEach((c, idx) => {
+    g.cells.forEach((c, idx) => {
       html += '<tr class="row-clickable" data-lat="' + c.lat + '" data-lon="' + c.lon +
         '" title="Click to fly to this cell"><td>' + (idx + 1) + '</td>' +
         '<td>' + fmtLatLon(c.lat, c.lon) + '</td>' +
@@ -1934,6 +1961,9 @@ async function applyYearWindow(startYear) {
     updateSeasonLabel();
     yearWindowNote.hidden = true;
     yearWindowNote.textContent = '';
+    /* Even on the fast path the selected cell may hold another
+       window's trend — refetch it so the panel follows the map. */
+    if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
     return;
   }
   const seq = ++windowSeq;
@@ -1964,6 +1994,10 @@ async function applyYearWindow(startYear) {
     updateSeasonLabel();
     yearWindowNote.hidden = true;
     yearWindowNote.textContent = '';
+    /* The map window changed: the selected cell's trend (and q) must
+       be refetched for the new window, or the panel keeps quoting
+       the old window's slope under the new window's heading. */
+    if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
     return;
   }
   /* Failed: restore EVERYTHING to the previous window — slider
@@ -2002,7 +2036,9 @@ function renderHotspotTable(tbodyId, rows) {
   /* Place first (a name a judge can read, coordinates under it), then
      bare signed numbers — the headers already carry the units
      ("Temp °C/dec", "Precip mm/day/dec"), so repeating them in every
-     cell only made the table wider. p/q stay as fmtSci. */
+     cell only made the table wider. p stays as fmtSci; the q columns
+     were dropped (2026-11-14) — q duplicated p for display and the
+     two extra columns clipped the table at desktop width. */
   tbody.innerHTML = rows.map((r) =>
     '<tr class="row-clickable" data-lat="' + r.lat + '" data-lon="' + r.lon + '" title="Click to fly to this cell">' +
     '<td>' + (r.place
@@ -2011,9 +2047,7 @@ function renderHotspotTable(tbodyId, rows) {
     '<td class="num">' + fmtSigned(r.temp_slope_per_decade, 2) + '</td>' +
     '<td class="num">' + fmtSigned(r.precip_slope_per_decade, 2) + '</td>' +
     '<td>' + fmtSci(r.temp_p_value) + '</td>' +
-    '<td>' + fmtSci(r.temp_q_value) + '</td>' +
-    '<td>' + fmtSci(r.precip_p_value) + '</td>' +
-    '<td>' + fmtSci(r.precip_q_value) + '</td></tr>'
+    '<td>' + fmtSci(r.precip_p_value) + '</td></tr>'
   ).join('');
   tbody.querySelectorAll('tr.row-clickable').forEach((tr) => {
     tr.addEventListener('click', () =>

@@ -240,15 +240,18 @@ def _cell_trend(series, label):
     return trend, verdict_text
 
 
-def _map_q(variable, cell_lat, cell_lon):
-    """(q_value, significant_bh) for a cell from the precomputed annual
-    map, or (None, None) when the map has no value there."""
-    default_map = _load_map_payload(variable)
-    ilat = int(np.argmin(np.abs(np.array(default_map["lat"]) - cell_lat)))
-    ilon = int(np.argmin(np.abs(np.array(default_map["lon"]) - cell_lon)))
-    q = default_map["q_value"][ilat][ilon]
+def _map_q(variable, cell_lat, cell_lon, start_year=None, end_year=None):
+    """(q_value, significant_bh) for a cell from the map payload for the
+    requested window (the precomputed full-period map by default), or
+    (None, None) when the map has no value there.  The windowed payload
+    is the in-memory cached one from _load_map_payload, so this is cheap
+    once the map itself has been loaded."""
+    payload = _load_map_payload(variable, start_year, end_year)
+    ilat = int(np.argmin(np.abs(np.array(payload["lat"]) - cell_lat)))
+    ilon = int(np.argmin(np.abs(np.array(payload["lon"]) - cell_lon)))
+    q = payload["q_value"][ilat][ilon]
     return q, (None if q is None
-               else bool(default_map["significant"][ilat][ilon]))
+               else bool(payload["significant"][ilat][ilon]))
 
 
 @app.route("/api/cell")
@@ -256,6 +259,13 @@ def cell_data():
     """Time series + Mann-Kendall trend for the grid cell at (lat, lon).
 
     Query params: variable=temperature|precipitation, lat, lon (degrees).
+    Optional start_year/end_year: the headline trend (and its q-value,
+    taken from the map for the same window) is computed over that
+    window, so the selected-cell panel follows the map window instead
+    of always quoting the full record.  The returned years/values stay
+    the full record (the chart and the record years need it); the
+    trend covers trend_years, and window_note says so when the window
+    had too few years with data and the full record was used instead.
     The trend line and its 95% confidence band are given by the median
     point (median_year, median_value) and the Sen's-slope CI: the band is
     the region between the lines through the median point with slopes
@@ -271,6 +281,11 @@ def cell_data():
         return jsonify({"error": "lat and lon query params are required"}), 400
     if not (-90 <= lat <= 90 and -540 <= lon <= 540):
         return jsonify({"error": "lat must be -90..90 and lon -540..540"}), 400
+    start_year = request.args.get("start_year", type=int)
+    end_year = request.args.get("end_year", type=int)
+    if (start_year is not None and end_year is not None
+            and end_year < start_year):
+        return jsonify({"error": "end_year must be >= start_year"}), 400
     try:
         cache = load_dataset(variable, GRID_DIR)
     except (FileNotFoundError, OSError) as exc:
@@ -280,14 +295,48 @@ def cell_data():
     payload = dict(series)
     payload["variable"] = label
     payload["records"] = record_years(series["years"], series["values"])
-    trend, verdict_text = _cell_trend(series, label)
+    window_note = None
+    if start_year is not None or end_year is not None:
+        win_years = [y for y in series["years"]
+                     if (start_year is None or y >= start_year)
+                     and (end_year is None or y <= end_year)]
+        win_values = [v for y, v in zip(series["years"], series["values"])
+                      if (start_year is None or y >= start_year)
+                      and (end_year is None or y <= end_year)]
+        if len(win_years) < 3:
+            return jsonify({"error": "year window needs at least 3 years"}), 400
+        win_series = {"years": win_years, "values": win_values,
+                      "unit": series["unit"]}
+        trend, verdict_text = _cell_trend(win_series, label)
+        if trend is None:
+            # Too few finite years in this window for this cell: fall
+            # back to the full record and say so, instead of showing
+            # an empty panel.
+            trend, verdict_text = _cell_trend(series, label)
+            window_note = ("Too few years with data in "
+                           f"{win_years[0] if win_years else start_year}"
+                           f"-{win_years[-1] if win_years else end_year} "
+                           "for this cell — showing the full record instead.")
+            trend_years = [series["years"][0], series["years"][-1]]
+            q_start, q_end = None, None
+        else:
+            trend_years = [win_years[0], win_years[-1]]
+            q_start, q_end = start_year, end_year
+    else:
+        trend, verdict_text = _cell_trend(series, label)
+        trend_years = [series["years"][0], series["years"][-1]]
+        q_start, q_end = None, None
     payload["trend"] = trend
     payload["verdict"] = verdict_text
+    payload["trend_years"] = trend_years
+    if window_note is not None:
+        payload["window_note"] = window_note
     if trend is not None:
         try:
             q_value, significant_bh = _map_q(variable, series["cell_lat"],
-                                             series["cell_lon"])
-        except (FileNotFoundError, KeyError, IndexError):
+                                             series["cell_lon"],
+                                             q_start, q_end)
+        except (FileNotFoundError, KeyError, IndexError, ValueError):
             q_value, significant_bh = None, None
         payload["trend"]["q_value"] = q_value
         payload["trend"]["significant_bh"] = significant_bh

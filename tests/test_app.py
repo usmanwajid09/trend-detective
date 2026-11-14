@@ -84,3 +84,22 @@ def test_bad_region_is_400(client):
 def test_global_has_no_precipitation(client):
     resp = client.get("/api/series?region=global&variable=precipitation")
     assert resp.status_code == 400
+
+
+def test_index_second_fix_round(client):
+    """Second fix round (2026-11-14): reference tiles above the overlay
+    replace the GeoJSON borders, hotspot tables lost their q columns,
+    the count-up animation is gone, and the slider label starts as the
+    full window instead of the "1880–…" placeholder."""
+    html = client.get("/").get_data(as_text=True)
+    assert "World_Light_Gray_Reference" in html
+    assert "world.geo.json" not in html
+    assert "loadBorders" not in html
+    assert "Temp q" not in html
+    assert "Precip q" not in html
+    assert html.count("<th>Temp p</th>") == 2
+    assert "animateCounters" not in html
+    assert "data-count" not in html
+    assert "1880&ndash;2026</output>" in html
+    assert "Tested, not significant" not in html
+    assert "Only cells with a significant trend are coloured" in html
