@@ -286,7 +286,10 @@ select:disabled { opacity: 0.5; }
 .legend-gradient {
   display: inline-block; width: 170px; height: 12px; flex: none;
   border: 1px solid var(--line-dark); border-radius: 2px;
-  background: linear-gradient(90deg, #2166ac, #f7f7f7 50%, #b2182b);
+  /* Same squared mapping as slopeColor(): stops at t = ±0.25 / ±0.5 /
+     ±0.75 carry f = t², so the gradient matches the painted cells
+     exactly — weak trends read pale on both. */
+  background: linear-gradient(90deg, #2166ac 0%, rgb(127,165,205) 12.5%, rgb(194,211,228) 25%, rgb(234,238,242) 37.5%, #f7f7f7 50%, rgb(243,233,234) 62.5%, rgb(230,191,196) 75%, rgb(208,122,132) 87.5%, #b2182b 100%);
 }
 .legend-end {
   font-variant-numeric: tabular-nums; font-weight: 700;
@@ -425,6 +428,7 @@ footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 
 #decades-section h3 { font-size: 1rem; margin: 1.1rem 0 0.5rem; }
 #decades-chart { max-height: 260px; }
 #map-season-label { font-weight: 700; color: var(--ink); }
+.decades-table th, .decades-table td { padding: 0.5rem 0.45rem; }
 .decades-table, .leaderboard-table, .hotspots-table {
   width: 100%; border-collapse: collapse; background: var(--bg); font-size: 0.9rem;
 }

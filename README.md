@@ -327,4 +327,46 @@ disclosure of AI tools used — this line is that disclosure.
   recording can never capture an intermediate value. The year-window
   label's initial text is "1880–2026" (it used to read "1880–…" until
   the script ran).
+- Third fix round after a third live visual check (2026-11-14): the
+  slider could stick in a broken state — after 1880 → 2016 → 1880 the
+  heading stayed "Global trend map · Recomputing…" with no year
+  window and the cell panel stayed on the 2016 slope, although the
+  footer and leaderboard had updated. Root cause, reproduced in a
+  node harness before fixing: `loadMap()` had no catch around fetch,
+  so a rejected fetch (the check overlapped a Render deploy restart)
+  escaped `applyYearWindow` as an unhandled rejection with
+  `windowPending` stuck true and the slider logic dead; the same path
+  also let the heading claim the new window while still recomputing.
+  Fixed: `loadMap()` catches fetch/JSON errors and returns `'error'`
+  (renders a "That window could not be computed" note and restores the
+  previous window); the pending flag is cleared in one place that
+  always runs, for the newest load, before the heading is updated;
+  the heading derives only from the loaded map data; the cell refetch
+  runs after every successful window change through
+  `refetchCellQuietly()`, whose failure cannot break heading state.
+  Regression test: `tests/test_slider_state.py` loads the shipped
+  template JavaScript under mocked DOM/fetch and drives the exact
+  live sequence — clean, mid-flight drag back, failing 2016 fetch,
+  failing 1880 return, throwing paint — asserting heading, pending
+  flag and cell-panel window after each step, and that no unhandled
+  rejections occur.
+- Colour and basemap (same round): the trend colours now follow a
+  squared (power) scale — painted intensity is (|slope| / maxAbs)²,
+  so weak warming (+0.1 °C/decade) reads near-white instead of the
+  pale pink wash of the linear scale, and strong warming still
+  carries deep red; the legend gradient uses the identical computed
+  stops, so the legend stays honest, and exact numbers are always in
+  the cell panel. The basemap is now Esri World Street Map (verified
+  tile at z=2 returns HTTP 200, readable country labels at world
+  zoom), replacing the Light Gray Base; the labels-on-top layer is
+  Esri World Boundaries and Places (verified HTTP 200), replacing
+  the Light Gray Reference, which was nearly empty at world zoom.
+  One base, one label source, no double labels. Non-significant
+  cells still paint nothing, so the basemap shows through.
+- "Is it speeding up?" decades tables (same round): the slope
+  cells no longer repeat the unit in every row and the headers are
+  shortened ("Slope / dec", "p", "Sig."), so all five columns are
+  visible at desktop width without an inner scrollbar. The
+  leaderboard intro now says "up to 10 in each direction" — a short
+  window can have fewer than ten qualifying cooling cells.
   Still open: Milestone 6 (final polish).

@@ -142,12 +142,12 @@
           <span class="legend-scale">
             <span class="legend-item">Cooling / drier</span>
             <span class="legend-end" id="legend-min">&minus;0.98</span>
-            <span class="legend-gradient" role="img" aria-label="Colour scale: dark blue for strong cooling through white (no change) to dark red for strong warming"></span>
+            <span class="legend-gradient" role="img" aria-label="Colour scale: dark blue for strong cooling through white (no change) to dark red for strong warming. The colour strengthens with the square of the trend, so weak trends are pale"></span>
             <span class="legend-end" id="legend-max">+0.98</span>
             <span class="legend-unit" id="legend-unit">&deg;C / decade</span>
             <span class="legend-item">Warming / wetter</span>
           </span>
-          <span class="legend-item">White = no change (0)</span>
+          <span class="legend-item">White = no change (0) · pale = weak trend</span>
           <span class="legend-item">Uncoloured: not significant, or too little data</span>
         </div>
         <p id="map-stats" class="map-stats" role="status">Loading map&hellip;</p>
@@ -230,7 +230,7 @@
           <p class="note" id="decades-note" hidden></p>
           <div class="table-wrap">
             <table class="decades-table" id="decades-table">
-              <thead><tr><th>Decade</th><th>Slope / decade</th><th>p-value</th><th>Significant</th><th>n</th></tr></thead>
+              <thead><tr><th>Decade</th><th>Slope / dec</th><th>p</th><th>Sig.</th><th>n</th></tr></thead>
               <tbody id="decades-tbody"></tbody>
             </table>
           </div>
@@ -238,7 +238,7 @@
             <h3 id="decades-cell-note"></h3>
             <div class="table-wrap">
               <table class="decades-table" id="decades-cell-table">
-                <thead><tr><th>Decade</th><th>Slope / decade</th><th>p-value</th><th>Significant</th><th>n</th></tr></thead>
+                <thead><tr><th>Decade</th><th>Slope / dec</th><th>p</th><th>Sig.</th><th>n</th></tr></thead>
                 <tbody id="decades-cell-tbody"></tbody>
               </table>
             </div>
@@ -254,7 +254,7 @@
     <div class="card-head">
       <h2 id="leaderboard-title">Leaderboard: the fastest-changing cells</h2>
       <p class="card-sub" id="leaderboard-sub">Only cells that passed the
-      Benjamini-Hochberg check (q &le; 0.05) qualify &mdash; the top 10 in
+      Benjamini-Hochberg check (q &le; 0.05) qualify &mdash; up to 10 in
       each direction, computed from the map you are looking at. Switch the
       map variable to see the other pair. Click a row to fly to that cell.</p>
     </div>
@@ -1026,6 +1026,7 @@ const mapCtx = mapCanvas.getContext('2d');
 const mapVarSel = $('map-variable');
 const seasonSel = $('map-season');
 const SEASON_LABELS = { annual: 'Annual', DJF: 'Winter (DJF)', MAM: 'Spring (MAM)', JJA: 'Summer (JJA)', SON: 'Autumn (SON)' };
+/* WINDOW-LABEL-START */
 function currentSeason() { return seasonSel ? seasonSel.value : 'annual'; }
 function seasonSuffix() {
   const s = currentSeason();
@@ -1047,20 +1048,23 @@ function updateSeasonLabel() {
   if (h) h.textContent = 'Global trend map' + seasonSuffix() + windowSuffix() +
     (windowPending ? ' \u00B7 Recomputing\u2026' : '');
 }
+/* WINDOW-LABEL-END */
 function unitFor(variable) { return variable === 'precipitation' ? 'mm/day' : '\u00B0C'; }
 const mapTooltip = $('map-tooltip');
 let mapData = null;
 let leafletMap = null, overlay = null;
-/* Country labels and borders come from Esri's World Light Gray
-   Reference tiles, drawn in a custom pane ABOVE the trend overlay
-   (a normal tileLayer would sit in the tile pane, below the overlay,
-   and the labels would be hidden under it exactly as the basemap
-   labels were). The reference tiles are transparent apart from the
-   labels and boundaries, so they never hide the trend colours. This
-   replaces the Natural Earth GeoJSON borders layer (removed
-   2026-11-14): one border style, from the same source as the base. */
+/* Country labels and borders come from Esri's World Boundaries and
+   Places reference tiles, drawn in a custom pane ABOVE the trend
+   overlay (a normal tileLayer would sit in the tile pane, below the
+   overlay, and the labels would be hidden under it exactly as the
+   basemap labels were). The reference tiles are transparent apart
+   from the labels and boundaries, so they never hide the trend
+   colours. The old Light Gray Reference layer had almost no labels
+   at world zoom (its z=2 tile is nearly empty, verified 2026-11-14);
+   the Boundaries and Places layer draws legible country names at
+   every zoom — verified by viewing its z=2 and z=5 tiles. */
 const REFERENCE_URL =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 let primaryMarker = null, compareMarker = null;
 let primaryCell = null;   /* {lat, lon, payload} */
 let compareCell = null;   /* {lat, lon, payload} or null */
@@ -1072,13 +1076,19 @@ const CELL_PX = 4;  /* canvas pixels per grid cell (2x for a 2-degree grid) */
 function slopeColor(slope, maxAbs) {
   /* Diverging blue -> white -> red, exactly the legend's endpoints:
      cooling #2166ac (33,102,172), no change #f7f7f7 (247,247,247),
-     warming #b2182b (178,24,43). No cyan anywhere: a tiny warming and a
-     tiny cooling both start from white, not from pale cyan. */
+     warming #b2182b (178,24,43). The painted intensity is the SQUARE
+     of the fraction of the strongest trend, so a typical weak warming
+     (+0.1 of a +0.99 max) renders nearly white and only genuinely
+     strong trends carry colour — the old linear scale made the whole
+     1880 map a pale pink wash. The legend gradient uses the same
+     squared mapping (see .legend-gradient in style.css), so the scale
+     stays honest; exact numbers are always in the cell panel. */
   const t = Math.max(-1, Math.min(1, slope / maxAbs));
-  const lerp = (a, b, f) => Math.round(a + (b - a) * f);
-  if (t >= 0) return 'rgb(' + lerp(247, 178, t) + ',' + lerp(247, 24, t) + ',' + lerp(247, 43, t) + ')';
-  const f = -t;
-  return 'rgb(' + lerp(247, 33, f) + ',' + lerp(247, 102, f) + ',' + lerp(247, 172, f) + ')';
+  const f = Math.sign(t) * t * t;
+  const lerp = (a, b, x) => Math.round(a + (b - a) * x);
+  if (f >= 0) return 'rgb(' + lerp(247, 178, f) + ',' + lerp(247, 24, f) + ',' + lerp(247, 43, f) + ')';
+  const g = -f;
+  return 'rgb(' + lerp(247, 33, g) + ',' + lerp(247, 102, g) + ',' + lerp(247, 172, g) + ')';
 }
 
 /* Paint the trend grid onto #map-canvas and return a data URL for the
@@ -1184,13 +1194,15 @@ function initLeaflet() {
        map instead of the page. The +/- buttons always work. */
     scrollWheelZoom: false,
   }).setView([28, 10], 2);
-  /* Basemap: Esri World Light Gray Base — a light, minimal basemap
-     with ENGLISH place labels, no API key. (OpenStreetMap labels
+  /* Basemap: Esri World Street Map — a real map with ENGLISH place
+     labels legible at world zoom, no API key. (OpenStreetMap labels
      render in local scripts; CARTO light_all returns an
-     "API KEY REQUIRED" watermark tile, verified 2026-11-14.) keepBuffer
-     preloads tiles around the viewport so zooming does not leave
-     grey placeholder rectangles at the map's edge. */
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+     "API KEY REQUIRED" watermark tile, verified 2026-11-14; the Esri
+     Light Gray Base underneath the old reference layer left labels
+     unreadable at world zoom.) keepBuffer preloads tiles around the
+     viewport so zooming does not leave grey placeholder rectangles
+     at the map's edge. */
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, FAO, NOAA, USGS',
     maxZoom: 16,
     keepBuffer: 2,
@@ -1251,6 +1263,7 @@ function onMapMouseMove(e) {
 /* Active on-demand map window, set by the year slider. Null start means
    the precomputed full-period map. The end is always the latest year in
    the map data (mapData.years[1]). */
+/* LOADMAP-START */
 let mapWindow = { start: null, end: null };
 /* Generations of window requests: a newer request (or a variable/season
    change) supersedes an older one. The in-flight applyYearWindow of a
@@ -1289,8 +1302,21 @@ async function loadMap(loadingText) {
       url += '&start_year=' + mapWindow.start +
         (mapWindow.end ? '&end_year=' + mapWindow.end : '');
     }
-    const res = await fetch(url);
-    const d = await res.json().catch(() => ({}));
+    /* A failed fetch must NEVER throw out of loadMap. An uncaught
+       rejection used to exit applyYearWindow with windowPending still
+       true, leaving the heading stuck on "Recomputing\u2026" and the
+       slider dead (reproduced in a node harness, 2026-11-14 — the live
+       trigger was most likely a request failing during the Render
+       deploy restart). Return 'error' so the caller runs its restore
+       path instead. */
+    let res, d;
+    try {
+      res = await fetch(url);
+      d = await res.json().catch(() => ({}));
+    } catch (e) {
+      $('map-stats').textContent = 'Could not load the trend map (' + e.message + ') \u2014 showing the previous map.';
+      return 'error';
+    }
     if (seq !== mapLoadSeq) return 'stale';
     if (!res.ok || d.error) {
       /* Seasonal map missing (503) or any other map error: say so in
@@ -1302,24 +1328,41 @@ async function loadMap(loadingText) {
     }
     mapData = d;
     if (mapWindow.start && !mapWindow.end) mapWindow.end = d.years[1];
+    /* The newest map has landed: no recompute is pending any more.
+       Clear the flag HERE, before updating the heading. This load
+       passed the sequence check, so no newer request exists yet, and
+       this block runs synchronously after the await, so none can
+       start mid-way. Clearing here (rather than only in the caller)
+       is what stops the heading briefly claiming the NEW window while
+       still saying "Recomputing\u2026" — seen live 2026-11-14. */
+    windowPending = false;
     updateYearWindowLabel();
     updateSeasonLabel();
-    const overlayUrl = paintOverlay();
-    if (leafletMap && overlayUrl) {
-      if (overlay) overlay.setUrl(overlayUrl);
-      else {
-        /* Opacity 1.0: the canvas alpha already controls the blending —
-           only significant cells are painted, everything else is
-           transparent, so dimming the whole overlay would only wash
-           the real colours out. The reference pane (labels/borders)
-           sits above it by pane z-index, no bringToFront needed. */
-        overlay = L.imageOverlay(overlayUrl, [[-90, -180], [90, 180]], { opacity: 1.0, interactive: false });
-        overlay.addTo(leafletMap);
+    /* Painting must not throw out of loadMap either: if it does, the
+       caller runs its restore path and refetches the previous window,
+       so the map, heading and leaderboard stay consistent. */
+    let overlayUrl;
+    try {
+      overlayUrl = paintOverlay();
+      if (leafletMap && overlayUrl) {
+        if (overlay) overlay.setUrl(overlayUrl);
+        else {
+          /* Opacity 1.0: the canvas alpha already controls the blending —
+             only significant cells are painted, everything else is
+             transparent, so dimming the whole overlay would only wash
+             the real colours out. The reference pane (labels/borders)
+             sits above it by pane z-index, no bringToFront needed. */
+          overlay = L.imageOverlay(overlayUrl, [[-90, -180], [90, 180]], { opacity: 1.0, interactive: false });
+          overlay.addTo(leafletMap);
+        }
+        if (primaryMarker) primaryMarker.addTo(leafletMap);
+        if (compareMarker) compareMarker.addTo(leafletMap);
       }
-      if (primaryMarker) primaryMarker.addTo(leafletMap);
-      if (compareMarker) compareMarker.addTo(leafletMap);
+      renderLeaderboard();
+    } catch (e) {
+      $('map-stats').textContent = 'Could not draw the trend map (' + e.message + ') \u2014 showing the previous map.';
+      return 'error';
     }
-    renderLeaderboard();
     return 'ok';
   } finally {
     /* Only the latest load may hide the spinner: an older load
@@ -1327,6 +1370,7 @@ async function loadMap(loadingText) {
     if (seq === mapLoadSeq) setMapLoading(false);
   }
 }
+/* LOADMAP-END */
 
 function makeMarker(lat, lon, colour) {
   return L.circleMarker([lat, lon], {
@@ -1471,6 +1515,7 @@ function showCell(d) {
   $('lahore-note').hidden =
     !(mapVarSel.value === 'temperature' && d.cell_lat === 31.0 && d.cell_lon === 75.0);
 }
+/* FETCHCELL-START */
 async function fetchCell(lat, lon) {
   /* The cell trend follows the active map window: pass the window so
      /api/cell computes the trend (and q) over it instead of the full
@@ -1485,6 +1530,7 @@ async function fetchCell(lat, lon) {
   if (d.error) throw new Error(d.error);
   return d;
 }
+/* FETCHCELL-END */
 async function selectPrimary(lat, lon) {
   compareArmed = false;
   /* A new primary cell ends any old comparison: the pinned B cell belonged
@@ -1671,10 +1717,14 @@ document.querySelectorAll('.preset[data-place-lat]').forEach((chip) => {
    shows a short note in the section and never breaks the page. */
 const decadesState = { chart: null, globalToken: 0, cellToken: 0 };
 function decadesRowsHTML(d) {
+  /* The header already carries the unit ("Slope / dec"), so the cells
+     show bare signed numbers — repeating the unit in every cell made
+     the table too wide for its card and clipped the Sig./n columns
+     at desktop width (seen live 2026-11-14). */
   return d.decades.map((row) =>
     '<tr><td>' + row.decade + '</td>' +
     '<td class="num">' + (row.slope_per_decade === null || row.slope_per_decade === undefined
-      ? '\u2014' : fmtSigned(row.slope_per_decade) + ' ' + d.unit + '/decade') + '</td>' +
+      ? '\u2014' : fmtSigned(row.slope_per_decade)) + '</td>' +
     '<td>' + fmtP(row.p_value) + '</td>' +
     '<td>' + (row.significant ? 'Yes' : 'No') + '</td>' +
     '<td class="num">' + row.n + '</td></tr>'
@@ -1937,6 +1987,7 @@ function renderLeaderboard() {
    the UI (see windowSeq / mapLoadSeq), and a failed window restores
    EVERYTHING to the previous one — slider, heading, map, leaderboard
    and stats — never a contradictory mix. */
+/* SLIDER-START */
 const yearSlider = $('year-start-slider');
 const yearWindowNote = $('year-window-note');
 let yearSliderTimer = null;
@@ -1946,6 +1997,20 @@ function updateYearWindowLabel() {
   const start = yearSlider ? parseInt(yearSlider.value, 10) : (mapData ? mapData.years[0] : 1880);
   const end = mapWindow.end || (mapData ? mapData.years[1] : null);
   label.textContent = start + '\u2013' + (end === null || end === undefined ? '\u2026' : end);
+}
+/* Re-measure the inspected cell for the new window. A failure must not
+   break the heading state (already settled by the caller) and must never
+   throw out of the window handler: the panel simply keeps the previous
+   window's numbers, whose own label still matches them, and the note
+   says so honestly. */
+async function refetchCellQuietly() {
+  if (!primaryCell) return;
+  try {
+    await selectPrimary(primaryCell.lat, primaryCell.lon);
+  } catch (e) {
+    yearWindowNote.hidden = false;
+    yearWindowNote.textContent = 'The map changed, but the inspected cell could not be re-measured \u2014 showing its previous trend.';
+  }
 }
 async function applyYearWindow(startYear) {
   /* Fast path: the requested start is already the loaded map's start
@@ -1963,7 +2028,7 @@ async function applyYearWindow(startYear) {
     yearWindowNote.textContent = '';
     /* Even on the fast path the selected cell may hold another
        window's trend — refetch it so the panel follows the map. */
-    if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
+    await refetchCellQuietly();
     return;
   }
   const seq = ++windowSeq;
@@ -1983,11 +2048,23 @@ async function applyYearWindow(startYear) {
     seasonSel.value = 'annual';
     updateSeasonLabel();
   }
-  const result = await loadMap('Recomputing map\u2026 this window takes about 15 seconds.');
+  let result;
+  try {
+    result = await loadMap('Recomputing map\u2026 this window takes about 15 seconds.');
+  } catch (e) {
+    /* loadMap must not throw any more (it returns 'error' instead), but
+       a throw must never escape with the flag set — treat it as a
+       failed window so the restore path below runs. */
+    result = 'error';
+  }
   /* Superseded by a newer window request (or a variable/season
      change): the newer request owns the UI now, so touch nothing —
-     in particular do NOT run the restore path and clobber it. */
+     in particular do NOT run the restore path and clobber it, and do NOT
+     clear the flag (the newer request owns it). */
   if (seq !== windowSeq || result === 'stale') return;
+  /* The single clear for the slow path: this call is still current, so
+     the flag is ours to clear, on every non-superseded exit (success
+     and failure alike). */
   windowPending = false;
   if (result === 'ok') {
     updateYearWindowLabel();
@@ -1997,7 +2074,7 @@ async function applyYearWindow(startYear) {
     /* The map window changed: the selected cell's trend (and q) must
        be refetched for the new window, or the panel keeps quoting
        the old window's slope under the new window's heading. */
-    if (primaryCell) await selectPrimary(primaryCell.lat, primaryCell.lon);
+    await refetchCellQuietly();
     return;
   }
   /* Failed: restore EVERYTHING to the previous window — slider
@@ -2008,7 +2085,13 @@ async function applyYearWindow(startYear) {
   yearSlider.value = prev.start === null ? 1880 : prev.start;
   updateYearWindowLabel();
   updateSeasonLabel();
-  await loadMap();
+  try {
+    await loadMap();
+  } catch (e) {
+    /* The flag is already false and the heading already describes the
+       restored window; a failed restore repaint leaves the previous
+       map up and the note below still explains what happened. */
+  }
   if (seq !== windowSeq) return;
   yearWindowNote.hidden = false;
   yearWindowNote.textContent = 'That window could not be computed \u2014 restored the previous window (' +
@@ -2026,6 +2109,7 @@ if (yearSlider) {
     }, 600);
   });
 }
+/* SLIDER-END */
 
 /* ---------- Hotspots: where warming meets water ----------
    Served by /api/hotspots (backend lands separately). A failed fetch

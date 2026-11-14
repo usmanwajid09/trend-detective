@@ -1,5 +1,7 @@
 """Tests for the Flask routes in app.py."""
 
+from pathlib import Path
+
 import pytest
 
 from app import app
@@ -86,13 +88,17 @@ def test_global_has_no_precipitation(client):
     assert resp.status_code == 400
 
 
-def test_index_second_fix_round(client):
-    """Second fix round (2026-11-14): reference tiles above the overlay
-    replace the GeoJSON borders, hotspot tables lost their q columns,
-    the count-up animation is gone, and the slider label starts as the
-    full window instead of the "1880–…" placeholder."""
+def test_index_third_fix_round(client):
+    """Third fix round (2026-11-14): the slider state machine can no
+    longer stick on "Recomputing…" (loadMap never throws, the flag is
+    cleared when the newest map lands, the cell refetch cannot throw),
+    the map uses a squared colour scale over the Esri World Street Map
+    with a Boundaries and Places label layer on top, the decades table
+    fits, and the leaderboard says "up to 10"."""
     html = client.get("/").get_data(as_text=True)
-    assert "World_Light_Gray_Reference" in html
+    assert "World_Street_Map" in html
+    assert "World_Boundaries_and_Places" in html
+    assert "World_Light_Gray" not in html
     assert "world.geo.json" not in html
     assert "loadBorders" not in html
     assert "Temp q" not in html
@@ -103,3 +109,11 @@ def test_index_second_fix_round(client):
     assert "1880&ndash;2026</output>" in html
     assert "Tested, not significant" not in html
     assert "Only cells with a significant trend are coloured" in html
+    assert "refetchCellQuietly" in html
+    assert "Could not load the trend map" in html
+    assert "<th>Slope / dec</th>" in html
+    assert "<th>Sig.</th>" in html
+    assert "up to 10 in" in html
+    assert "SQUARE" in html  # slopeColor comment: squared colour scale
+    css = (Path(__file__).parent.parent / "static" / "style.css").read_text()
+    assert "rgb(127,165,205)" in css  # legend gradient, same squared stops
