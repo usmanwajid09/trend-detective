@@ -22,3 +22,11 @@ main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
   text-align: left; }
 .summary th { background: #0b2239; color: #fff; }
 footer { margin-top: 2rem; color: #555; font-size: 0.85rem; }
+.map { margin-top: 2rem; }
+.map-box { background: #fff; padding: 0.5rem; border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow-x: auto; }
+.map-box canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
+.legend { font-size: 0.9rem; }
+.swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px;
+  vertical-align: -0.15em; margin: 0 0.2em 0 0.8em; }
+.cell-box { margin-top: 2rem; }

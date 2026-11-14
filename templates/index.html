@@ -52,11 +52,47 @@
     </table>
   </section>
 
+  <section class="map">
+    <h2>Global trend map</h2>
+    <p class="note">Every cell is one Mann-Kendall trend test. Coloured cells
+    passed the Benjamini-Hochberg check — a coloured cell is one you can
+    trust. Grey cells were tested but are not significant; blank areas have
+    too little data. Click any cell to see its time series.</p>
+    <label>Variable
+      <select id="map-variable">
+        <option value="temperature">Temperature</option>
+        <option value="precipitation">Precipitation</option>
+      </select>
+    </label>
+    <div class="map-box">
+      <canvas id="map-canvas" width="900" height="450"></canvas>
+    </div>
+    <p id="map-stats" class="note">Loading map…</p>
+    <p class="legend">
+      <span class="swatch" style="background:#2166ac"></span> cooling
+      <span class="swatch" style="background:#f7f7f7"></span> no change
+      <span class="swatch" style="background:#b2182b"></span> warming
+      <span class="swatch" style="background:#d9d9d9"></span> not significant
+      <span class="swatch" style="background:#f4f7fa;border:1px solid #ccc"></span> no data
+    </p>
+  </section>
+
+  <section id="cell-panel" class="cell-box" hidden>
+    <h2 id="cell-title">Cell</h2>
+    <div class="chart-box"><canvas id="cell-chart"></canvas></div>
+    <p id="cell-verdict" class="verdict"></p>
+    <p id="cell-meta" class="note"></p>
+  </section>
+
   <footer>
-    <p>Data: NASA POWER (power.larc.nasa.gov) and NASA GISTEMP v4
-    (data.giss.nasa.gov). Trends are ordinary least-squares regressions with a
-    two-sided p-value; “significant” means p &lt; 0.05. No data is invented —
-    the app serves the cached downloads in <code>data/</code>.</p>
+    <p>Data: NASA POWER (power.larc.nasa.gov), NASA GISTEMP v4
+    (data.giss.nasa.gov), GPCP v2.3 (psl.noaa.gov). Point trends are
+    ordinary least-squares regressions with a two-sided p-value. Map
+    trends are Mann-Kendall tests with Sen's slope, a Hamed-Rao
+    autocorrelation correction (first 3 lags), and Benjamini-Hochberg
+    false-discovery control at 5%. “Significant” means p &lt; 0.05 for a
+    point series and q ≤ 0.05 for a map cell. No data is invented — the
+    app serves the cached downloads in <code>data/</code>.</p>
     <p>AI disclosure: this starter was built with AI assistance (Muse).</p>
   </footer>
 </main>
@@ -135,6 +171,167 @@ variableSel.addEventListener('change', loadSeries);
 syncVariables();
 loadSeries();
 loadSummary();
+
+// ---------- Global trend map ----------
+const mapCanvas = document.getElementById('map-canvas');
+const mapCtx = mapCanvas.getContext('2d');
+const mapVarSel = document.getElementById('map-variable');
+let mapData = null;
+let cellChart = null;
+
+function slopeColor(slope, maxAbs) {
+  // Diverging blue-white-red, zero = white.
+  const t = Math.max(-1, Math.min(1, slope / maxAbs));
+  if (t >= 0) {
+    const g = Math.round(247 - (247 - 24) * t);
+    const b = Math.round(247 - (247 - 43) * t);
+    return `rgb(178,${g},${b})`;
+  }
+  const g = Math.round(247 - (247 - 102) * -t);
+  const b = Math.round(247 - (247 - 172) * -t);
+  return `rgb(${Math.round(178 - (178 - 33) * -t)},${g},${b})`;
+}
+
+function drawMap() {
+  if (!mapData) return;
+  const W = mapCanvas.width, H = mapCanvas.height;
+  const nLat = mapData.lat.length, nLon = mapData.lon.length;
+  const cw = W / nLon, ch = H / nLat;
+  // Scale from the largest significant |slope| (floor 0.1 so maps never blow up).
+  let maxAbs = 0.1;
+  for (let i = 0; i < nLat; i++) {
+    for (let j = 0; j < nLon; j++) {
+      if (mapData.significant[i][j]) {
+        maxAbs = Math.max(maxAbs, Math.abs(mapData.slope_per_decade[i][j]));
+      }
+    }
+  }
+  mapCtx.clearRect(0, 0, W, H);
+  for (let i = 0; i < nLat; i++) {
+    for (let j = 0; j < nLon; j++) {
+      const s = mapData.slope_per_decade[i][j];
+      if (s === null || s === undefined) continue;  // no data: leave blank
+      mapCtx.fillStyle = mapData.significant[i][j]
+        ? slopeColor(s, maxAbs) : '#d9d9d9';
+      mapCtx.fillRect(j * cw, i * ch, cw + 0.5, ch + 0.5);
+    }
+  }
+  let tested = 0, sig = 0;
+  for (let i = 0; i < nLat; i++) {
+    for (let j = 0; j < nLon; j++) {
+      if (mapData.p_value[i][j] !== null) tested++;
+      if (mapData.significant[i][j]) sig++;
+    }
+  }
+  document.getElementById('map-stats').textContent =
+    `${mapData.source} · ${mapData.years[0]}–${mapData.years[1]} · ` +
+    `${tested.toLocaleString()} cells tested · ${sig.toLocaleString()} significant ` +
+    `after Benjamini-Hochberg (q ≤ 0.05) · colour scale ±${maxAbs.toFixed(2)} ${mapData.unit}/decade`;
+}
+
+async function loadMap() {
+  document.getElementById('map-stats').textContent = 'Loading map…';
+  const res = await fetch(`/api/map?variable=${mapVarSel.value}`);
+  mapData = await res.json();
+  if (mapData.error) {
+    document.getElementById('map-stats').textContent = 'Error: ' + mapData.error;
+    return;
+  }
+  drawMap();
+}
+
+function canvasLatLon(evt) {
+  const rect = mapCanvas.getBoundingClientRect();
+  const x = (evt.clientX - rect.left) * mapCanvas.width / rect.width;
+  const y = (evt.clientY - rect.top) * mapCanvas.height / rect.height;
+  const nLat = mapData.lat.length, nLon = mapData.lon.length;
+  const j = Math.min(nLon - 1, Math.floor(x / (mapCanvas.width / nLon)));
+  const i = Math.min(nLat - 1, Math.floor(y / (mapCanvas.height / nLat)));
+  return { lat: mapData.lat[i], lon: mapData.lon[j] };
+}
+
+async function loadCell(lat, lon) {
+  const res = await fetch(`/api/cell?variable=${mapVarSel.value}&lat=${lat}&lon=${lon}`);
+  const d = await res.json();
+  if (d.error) return;
+  const panel = document.getElementById('cell-panel');
+  panel.hidden = false;
+  document.getElementById('cell-title').textContent =
+    `Cell ${d.cell_lat}°, ${d.cell_lon}° — ${d.variable} (${d.unit})`;
+  const v = document.getElementById('cell-verdict');
+  v.textContent = d.verdict;
+  v.className = 'verdict ' + ((d.trend && d.trend.significant_bh) ? 'sig' : 'nosig');
+  document.getElementById('cell-meta').textContent =
+    `Grid cell centre ${d.cell_lat}°, ${d.cell_lon}° · ${d.years[0]}–${d.years[d.years.length - 1]} · ` +
+    `n = ${d.n} years with data · Source: ${d.source}` +
+    (d.trend ? ` · Sen's slope ${d.trend.slope_per_decade >= 0 ? '+' : ''}${d.trend.slope_per_decade.toFixed(3)} ${d.unit}/decade ` +
+      `(95% CI ${d.trend.ci_lo_per_decade >= 0 ? '+' : ''}${d.trend.ci_lo_per_decade.toFixed(3)} to ` +
+      `${d.trend.ci_hi_per_decade >= 0 ? '+' : ''}${d.trend.ci_hi_per_decade.toFixed(3)}) · ` +
+      `p = ${d.trend.p_value.toExponential(2)}` +
+      (d.trend.q_value !== null && d.trend.q_value !== undefined
+        ? ` · q = ${d.trend.q_value.toExponential(2)}` : '') : '');
+  const ctx = document.getElementById('cell-chart');
+  if (cellChart) cellChart.destroy();
+  const datasets = [{
+    label: `${d.variable} (${d.unit})`,
+    data: d.values,
+    borderColor: '#0b5fa5',
+    backgroundColor: 'rgba(11,95,165,0.08)',
+    pointRadius: 2,
+    tension: 0.1,
+  }];
+  if (d.trend) {
+    const slopeYr = d.trend.slope_per_decade / 10;
+    const loYr = d.trend.ci_lo_per_decade / 10;
+    const hiYr = d.trend.ci_hi_per_decade / 10;
+    const line = (s) => d.years.map(y => d.trend.median_value + s * (y - d.trend.median_year));
+    datasets.push({
+      label: 'Trend (Sen’s slope)',
+      data: line(slopeYr),
+      borderColor: '#c0392b',
+      borderDash: [6, 4],
+      pointRadius: 0,
+      tension: 0,
+    });
+    datasets.push({
+      label: '95% CI (low)',
+      data: line(loYr),
+      borderColor: 'rgba(192,57,43,0.25)',
+      pointRadius: 0,
+      tension: 0,
+    });
+    datasets.push({
+      label: '95% CI (high)',
+      data: line(hiYr),
+      borderColor: 'rgba(192,57,43,0.25)',
+      backgroundColor: 'rgba(192,57,43,0.12)',
+      fill: '-1',
+      pointRadius: 0,
+      tension: 0,
+    });
+  }
+  cellChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: d.years, datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: {
+        x: { title: { display: true, text: 'Year' } },
+        y: { title: { display: true, text: d.variable + ' (' + d.unit + ')' } }
+      }
+    }
+  });
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+mapCanvas.addEventListener('click', (evt) => {
+  if (!mapData) return;
+  const { lat, lon } = canvasLatLon(evt);
+  loadCell(lat, lon);
+});
+mapVarSel.addEventListener('change', loadMap);
+loadMap();
 </script>
 </body>
 </html>
