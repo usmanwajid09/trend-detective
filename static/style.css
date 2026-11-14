@@ -225,9 +225,14 @@ select:disabled { opacity: 0.5; }
   cursor: pointer; padding: 0.4rem 0;
 }
 .slider-row output {
+  flex: none;
   font-weight: 700; font-variant-numeric: tabular-nums;
   color: var(--ink); font-size: 0.9rem; white-space: nowrap;
 }
+/* The slider label must keep its full width in a wrapping toolbar:
+   at 960px the year-window output was squeezed and its text cut off
+   ("1880–…"). Give it a floor so the whole "1880–2026" always fits. */
+.toolbar-label.slider-label { flex: 1 1 300px; min-width: 250px; }
 #year-window-note { flex-basis: 100%; margin: 0; min-height: 0; }
 #year-window-note:empty { display: none; }
 .work-grid {
@@ -255,10 +260,13 @@ select:disabled { opacity: 0.5; }
 .preset-note:empty { display: none; }
 .map-box {
   position: relative; border: 1px solid var(--line-dark);
-  border-radius: var(--radius); overflow: hidden; background: #eef1f3;
+  border-radius: var(--radius); overflow: hidden; background: #d4dee6;
 }
 #leaflet-map { height: 560px; width: 100%; z-index: 1; }
-.leaflet-container { font-family: inherit; background: #eef1f3; }
+/* Container background matches the Esri Light Gray basemap's water, so
+   a tile that has not loaded yet reads as ocean, not as a grey
+   placeholder rectangle at the map's edge. */
+.leaflet-container { font-family: inherit; background: #d4dee6; }
 .leaflet-image-layer { image-rendering: pixelated; }
 .map-stats {
   margin: 0.7rem 0 0; font-size: 0.86rem; color: var(--muted);
@@ -286,6 +294,10 @@ select:disabled { opacity: 0.5; }
 }
 .legend-unit { font-size: 0.84rem; color: var(--muted); white-space: nowrap; }
 .swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px; }
+/* "Tested, not significant" is painted as a translucent grey on the
+   map (basemap showing through), so the legend swatch is the same:
+   translucent grey with a grey edge, not a solid block. */
+.swatch-nosig { background: rgba(138, 151, 165, 0.28); border: 1px solid #8a97a5; }
 .map-tooltip {
   position: absolute; z-index: 600; pointer-events: none;
   background: #fff; border: 1px solid var(--line-dark);
@@ -403,6 +415,13 @@ footer code { color: var(--muted); background: var(--bg-soft); padding: 0.05rem 
 
 /* ---------- Decades / leaderboard / hotspots (more-trends depth) ---------- */
 .hotspots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+/* Grid items default to min-width: auto, so a wide table inside one
+   forced its track wider than the page — a page-level horizontal
+   scrollbar with the last column clipped — instead of letting the
+   .table-wrap inside it scroll. min-width: 0 lets the wrap do its job. */
+.hotspots-grid > div { min-width: 0; }
+.work-grid > * { min-width: 0; }
+.place-coords { font-size: 0.78rem; color: var(--muted); font-weight: 400; }
 #hotspots-section h3 { font-size: 1rem; margin: 0 0 0.55rem; }
 #hotspots-section .table-wrap { margin-top: 0; }
 .report-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-top: 1rem; }

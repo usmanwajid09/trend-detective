@@ -90,6 +90,26 @@ def test_map_window_start_year_only(client):
     assert int(np.array(d["significant"]).sum()) == 2899
 
 
+def test_map_window_shortest_slider_window_is_not_empty(client):
+    # The slider's latest start year is 2016 (a window needs at least
+    # 10 years of data for the Mann-Kendall test, min_n=10). A 2016
+    # window must still return real significant cells — it must never
+    # be the empty map a 2020 window used to give.
+    resp = client.get("/api/map?variable=temperature&start_year=2016")
+    assert resp.status_code == 200
+    d = resp.get_json()
+    assert d["years"] == [2016, 2026]
+    assert int(np.array(d["significant"]).sum()) > 0
+    resp = client.get("/api/map?variable=precipitation&start_year=2016")
+    assert int(np.array(resp.get_json()["significant"]).sum()) > 0
+
+
+def test_index_year_slider_caps_at_2016(client):
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="year-start-slider"' in html
+    assert 'max="2016"' in html
+
+
 def test_cell_lahore_precipitation(client):
     resp = client.get("/api/cell?variable=precipitation&lat=31.52&lon=74.36")
     d = resp.get_json()

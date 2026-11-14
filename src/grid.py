@@ -28,6 +28,7 @@ import numpy as np
 
 from stats.fdr import benjamini_hochberg
 from stats.mannkendall import mann_kendall_grid
+from src.placenames import place_name
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DIR = os.path.join(BASE, "data", "raw")
@@ -370,6 +371,10 @@ def find_hotspots(grid_dir=GRID_DIR, top=10):
     positive; drought needs a negative precipitation slope, flood a
     positive one.  NaN slopes/p/q-values never qualify.
 
+    Each entry also carries a coarse "place" name from
+    src/placenames.py (or None when the cell falls in no named
+    region — the frontend then shows coordinates alone).
+
     Ordering (documented, because either variable could lead): the
     drought list is ranked by temperature slope — how fast the cell is
     warming, the driver of evaporation and drought risk; the flood
@@ -404,9 +409,12 @@ def find_hotspots(grid_dir=GRID_DIR, top=10):
         idx = np.argwhere(mask)
         rows = []
         for i, j in idx:
+            lat = round(float(p_lat[i]), 2)
+            lon = round(_lon_180(p_lon[j]), 2)
             rows.append({
-                "lat": round(float(p_lat[i]), 2),
-                "lon": round(_lon_180(p_lon[j]), 2),
+                "lat": lat,
+                "lon": lon,
+                "place": place_name(lat, lon),
                 "temp_slope_per_decade": round(float(t_slope[i, j]), 4),
                 "precip_slope_per_decade": round(float(p_slope[i, j]), 4),
                 "temp_p_value": float(t_p[i, j]),

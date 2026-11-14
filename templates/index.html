@@ -79,7 +79,7 @@
       <h2 id="map-heading">Global trend map</h2>
       <p>Every cell is one Mann-Kendall trend test. Coloured cells passed the
       Benjamini-Hochberg check &mdash; a coloured cell is one you can trust.
-      Grey cells were tested but are not significant; blank areas have too
+      Pale grey cells were tested but are not significant; blank areas have too
       little data. <strong>Click any cell to inspect it.</strong></p>
     </div>
 
@@ -99,9 +99,9 @@
           <option value="SON">Autumn (SON)</option>
         </select>
       </label>
-      <label class="toolbar-label">Map window &mdash; start year
+      <label class="toolbar-label slider-label">Map window &mdash; start year
         <span class="slider-row">
-          <input type="range" id="year-start-slider" min="1880" max="2020" step="1" value="1880" aria-label="Start year of the map window">
+          <input type="range" id="year-start-slider" min="1880" max="2016" step="1" value="1880" aria-label="Start year of the map window" title="Windows need at least 10 years of data, so the latest start year is 2016.">
           <output id="year-window-label" for="year-start-slider">1880&ndash;&hellip;</output>
         </span>
       </label>
@@ -147,7 +147,7 @@
             <span class="legend-item">Warming / wetter</span>
           </span>
           <span class="legend-item">White = no change (0)</span>
-          <span class="legend-item"><span class="swatch" style="background:#8a97a5"></span>Tested, not significant</span>
+          <span class="legend-item"><span class="swatch swatch-nosig"></span>Tested, not significant</span>
           <span class="legend-item"><span class="swatch" style="background:transparent;border:1px solid #8a97a5"></span>No data</span>
         </div>
         <p id="map-stats" class="map-stats" role="status">Loading map&hellip;</p>
@@ -281,7 +281,7 @@
         <h3>Drought risk</h3>
         <div class="table-wrap">
           <table class="hotspots-table" id="hotspots-drought-table">
-            <thead><tr><th>Place</th><th>Temp / decade</th><th>Precip / decade</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
+            <thead><tr><th>Place</th><th>Temp &deg;C / dec</th><th>Precip mm/day / dec</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
             <tbody id="hotspots-drought-tbody"></tbody>
           </table>
         </div>
@@ -290,7 +290,7 @@
         <h3>Flood risk</h3>
         <div class="table-wrap">
           <table class="hotspots-table" id="hotspots-flood-table">
-            <thead><tr><th>Place</th><th>Temp / decade</th><th>Precip / decade</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
+            <thead><tr><th>Place</th><th>Temp &deg;C / dec</th><th>Precip mm/day / dec</th><th>Temp p</th><th>Temp q</th><th>Precip p</th><th>Precip q</th></tr></thead>
             <tbody id="hotspots-flood-tbody"></tbody>
           </table>
         </div>
@@ -475,8 +475,9 @@
         <h3>What it found</h3>
         <p>The planet is warming at <strong>+0.212 &deg;C per decade</strong>
         since 1981, and Reykjavik at almost exactly the same rate
-        (+0.194 &deg;C/decade). On the map, <strong>6,170 of 7,949 tested
-        temperature cells are significant</strong> &mdash; 6,084 warming,
+        (+0.194 &deg;C/decade). On the full record (1880&ndash;2026),
+        <strong>6,170 of 7,949 tested temperature cells are
+        significant</strong> &mdash; 6,084 warming,
         only 86 cooling. Lahore&rsquo;s rain is significantly up
         (+0.153 mm/day/decade).</p>
         <p>The honest complication: for Lahore, NASA POWER says no
@@ -690,7 +691,6 @@ document.querySelectorAll('[data-count]').forEach((el) => {
   el.dataset.final = (el.dataset.prefix || '') +
     parseFloat(el.dataset.count).toFixed(parseInt(el.dataset.decimals || '3', 10));
 });
-animateCounters();
 
 /* ---------- Zoomable Chart.js charts ---------- */
 function wireZoom(canvas, getChart) {
@@ -807,6 +807,11 @@ function hideFindingsLoading() {
   findingsLoadingHidden = true;
   const el = $('findings-loading');
   if (el) el.style.display = 'none';
+  /* The counters only start now, once at least one live fetch has
+     resolved — starting them at page load meant a recording (or a
+     screenshot) taken in the first second captured wrong intermediate
+     numbers like +0.134 instead of the real +0.212. */
+  animateCounters();
 }
 
 /* Render the record years from a payload's "records" field, if present.
@@ -897,6 +902,9 @@ async function loadSeries() {
     hideFindingsLoading();
   } finally {
     setSeriesLoading(false);
+    /* The loading cover must always clear — even when the fetch
+       itself fails — or the key findings stay hidden forever. */
+    hideFindingsLoading();
   }
   updateRegionPhoto();
 }
@@ -966,8 +974,9 @@ const REGION_CELLS = {
   'Reykjavik, Iceland': [64.15, -21.94],
 };
 async function loadSummary() {
-  const res = await fetch('/api/summary');
-  const rows = await res.json();
+  try {
+    const res = await fetch('/api/summary');
+    const rows = await res.json();
   const tbody = document.querySelector('#summary-table tbody');
   tbody.innerHTML = rows.map((r) => {
     const hasCell = REGION_CELLS[r.region] !== undefined;
@@ -992,7 +1001,11 @@ async function loadSummary() {
       }
     });
   });
-  hideFindingsLoading();
+  } finally {
+    /* Always clear the first-load cover, even if the summary fetch
+       itself fails — see loadSeries' finally for the same reason. */
+    hideFindingsLoading();
+  }
 }
 
 function syncVariables() {
@@ -1030,15 +1043,20 @@ function seasonSuffix() {
   return s === 'annual' ? '' : ' \u00B7 ' + (SEASON_LABELS[s] || s);
 }
 function windowSuffix() {
+  /* The heading describes the map that is actually LOADED, never the
+     window that was merely requested — claiming 1981 while the 1880
+     map was still on screen was the heading-lag bug. The years come
+     from mapData, not from the requested mapWindow. */
   if (!mapWindow.start) return '';
-  const end = mapWindow.end || (mapData ? mapData.years[1] : null);
-  return ' \u00B7 ' + mapWindow.start + '\u2013' + (end === null || end === undefined ? '\u2026' : end);
+  const y = mapData ? mapData.years : null;
+  return ' \u00B7 ' + (y ? y[0] + '\u2013' + y[1] : mapWindow.start + '\u2013\u2026');
 }
 function updateSeasonLabel() {
   const el = $('map-season-label');
   if (el) el.textContent = SEASON_LABELS[currentSeason()] || 'Annual';
   const h = $('map-heading');
-  if (h) h.textContent = 'Global trend map' + seasonSuffix() + windowSuffix();
+  if (h) h.textContent = 'Global trend map' + seasonSuffix() + windowSuffix() +
+    (windowPending ? ' \u00B7 Recomputing\u2026' : '');
 }
 function unitFor(variable) { return variable === 'precipitation' ? 'mm/day' : '\u00B0C'; }
 const mapTooltip = $('map-tooltip');
@@ -1095,7 +1113,13 @@ function slopeColor(slope, maxAbs) {
 /* Paint the trend grid onto #map-canvas and return a data URL for the
    Leaflet imageOverlay. The canvas is north-up: lat is ascending in the
    payload (south first), so row i paints at canvas row (nLat-1-i).
-   Longitudes are normalised to -180..180 first (GPCP ships 0..360). */
+   Longitudes are normalised to -180..180 first (GPCP ships 0..360).
+   Cell rectangles are anchored to the cells' edges (centre +/- step/2),
+   so neighbouring cells share edges exactly and the paint covers the
+   whole canvas with no seam or gap at the antimeridian or the poles —
+   a Python reproduction against the real grids (2026-11-14) confirmed
+   full coverage; the old fixed 4.5 px rects already covered, but
+   edge-anchored rects make it structural instead of lucky. */
 function paintOverlay() {
   if (!mapData) return null;
   const nLat = mapData.lat.length, nLon = mapData.lon.length;
@@ -1111,22 +1135,29 @@ function paintOverlay() {
       }
     }
   }
+  const xLeft = (lonC) => Math.round((normLon(lonC) - lonStep / 2 + 180) / 360 * mapCanvas.width);
+  const xRight = (lonC) => Math.round((normLon(lonC) + lonStep / 2 + 180) / 360 * mapCanvas.width);
+  const yTop = (latC) => Math.round((90 - (latC + latStep / 2)) / 180 * mapCanvas.height);
+  const yBot = (latC) => Math.round((90 - (latC - latStep / 2)) / 180 * mapCanvas.height);
   mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
   for (let i = 0; i < nLat; i++) {
-    const top = 90 - (mapData.lat[i] + latStep / 2);
-    const y = Math.round(top / 180 * mapCanvas.height);
+    const y0 = yTop(mapData.lat[i]), y1 = yBot(mapData.lat[i]);
     for (let j = 0; j < nLon; j++) {
       const s = mapData.slope_per_decade[i][j];
-      const left = normLon(mapData.lon[j]) - lonStep / 2;
-      const x = Math.round((left + 180) / 360 * mapCanvas.width);
       if (s === null || s === undefined || Number.isNaN(s)) {
-        /* No data: paint blank white, exactly as the legend promises, so
-           untested ocean never reads as cooling or as not-significant grey. */
-        mapCtx.fillStyle = '#ffffff';
-      } else {
-        mapCtx.fillStyle = mapData.significant[i][j] ? slopeColor(s, maxAbs) : '#8a97a5';
+        /* No data: paint nothing — the canvas stays transparent, so the
+           basemap shows through, exactly as the legend's "No data"
+           swatch promises. Solid white used to sheet the oceans over
+           and read as an unfinished pale wash. */
+        continue;
       }
-      mapCtx.fillRect(x, y, CELL_PX + 0.5, CELL_PX + 0.5);
+      /* Tested but not significant: a translucent grey, so the basemap
+         shows through — the old solid #8a97a5 read as splotchy grey
+         blocks, worst at the map's edge when zoomed. */
+      mapCtx.fillStyle = mapData.significant[i][j]
+        ? slopeColor(s, maxAbs) : 'rgba(138,151,165,0.28)';
+      const x0 = xLeft(mapData.lon[j]), x1 = xRight(mapData.lon[j]);
+      mapCtx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
     }
   }
   let tested = 0, sig = 0;
@@ -1172,9 +1203,16 @@ function initLeaflet() {
        map instead of the page. The +/- buttons always work. */
     scrollWheelZoom: false,
   }).setView([28, 10], 2);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
+  /* Basemap: Esri World Light Gray Base — a light, minimal basemap
+     with ENGLISH place labels, no API key. (OpenStreetMap labels
+     render in local scripts; CARTO light_all returns an
+     "API KEY REQUIRED" watermark tile, verified 2026-11-14.) keepBuffer
+     preloads tiles around the viewport so zooming does not leave
+     grey placeholder rectangles at the map's edge. */
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, FAO, NOAA, USGS',
+    maxZoom: 16,
+    keepBuffer: 2,
   }).addTo(leafletMap);
   leafletMap.on('mousemove', onMapMouseMove);
   leafletMap.on('mouseout', () => { mapTooltip.hidden = true; });
@@ -1229,8 +1267,32 @@ function onMapMouseMove(e) {
    the precomputed full-period map. The end is always the latest year in
    the map data (mapData.years[1]). */
 let mapWindow = { start: null, end: null };
+/* Generations of window requests: a newer request (or a variable/season
+   change) supersedes an older one. The in-flight applyYearWindow of a
+   superseded request must not touch the UI when it lands. */
+let windowSeq = 0;
+/* True while a window recompute is in flight. The heading shows
+   "Recomputing…" instead of claiming the new window before its map
+   has actually loaded. Managed only by applyYearWindow and by the
+   variable/season handlers, which cancel any pending window request. */
+let windowPending = false;
 
+/* Every map load carries a sequence number. Rapid slider changes can
+   leave two loads in flight; only the latest may touch the UI — an
+   older response landing later used to overwrite the map, the
+   heading, the stats and the leaderboard with a window nobody asked
+   for. Returns 'ok', 'error', or 'stale' (superseded). */
+let mapLoadSeq = 0;
+function cancelPendingMapLoad() {
+  /* Make an in-flight loadMap() discard its result when it lands (its
+     sequence check fails) — used when a newer request supersedes it
+     without starting a load of its own. Also hides the spinner, which
+     the discarded load's finally-block deliberately does not. */
+  mapLoadSeq++;
+  setMapLoading(false);
+}
 async function loadMap(loadingText) {
+  const seq = ++mapLoadSeq;
   const variable = mapVarSel.value;
   const season = currentSeason();
   updateSeasonLabel();
@@ -1244,13 +1306,14 @@ async function loadMap(loadingText) {
     }
     const res = await fetch(url);
     const d = await res.json().catch(() => ({}));
+    if (seq !== mapLoadSeq) return 'stale';
     if (!res.ok || d.error) {
       /* Seasonal map missing (503) or any other map error: say so in
          #map-stats and leave the previous map up — do not overwrite
          mapData with the error payload. */
       $('map-stats').textContent = 'Error: ' + (d.error || ('HTTP ' + res.status)) +
         seasonSuffix() + windowSuffix() + ' \u2014 showing the previous map.';
-      return false;
+      return 'error';
     }
     mapData = d;
     if (mapWindow.start && !mapWindow.end) mapWindow.end = d.years[1];
@@ -1270,9 +1333,11 @@ async function loadMap(loadingText) {
       if (bordersLayer) bordersLayer.bringToFront();
     }
     renderLeaderboard();
-    return true;
+    return 'ok';
   } finally {
-    setMapLoading(false);
+    /* Only the latest load may hide the spinner: an older load
+       finishing first must not clear the overlay of a newer one. */
+    if (seq === mapLoadSeq) setMapLoading(false);
   }
 }
 
@@ -1538,6 +1603,11 @@ $('compare-clear').addEventListener('click', () => {
 });
 mapVarSel.addEventListener('change', async () => {
   mapData = null;
+  /* A variable change supersedes any in-flight window recompute: its
+     applyYearWindow must return early instead of re-stamping the
+     heading when it lands. */
+  windowSeq++;
+  windowPending = false;
   /* Switching variable ends any comparison (the pinned cell was measured
      in the old variable's units) and re-fetches the inspected cell, if
      any, under the new variable so the panel never shows stale units. */
@@ -1553,6 +1623,10 @@ mapVarSel.addEventListener('change', async () => {
   loadChangepoint();
 });
 seasonSel.addEventListener('change', async () => {
+  /* Season change supersedes any in-flight window recompute, as the
+     variable change does. */
+  windowSeq++;
+  windowPending = false;
   /* Season change mirrors the variable change: it ends any comparison
      (the pinned cell was measured under the old season) and re-fetches
      the inspected cell, if any, under the new season. A seasonal map is
@@ -1826,10 +1900,16 @@ function renderLeaderboard() {
 }
 
 /* ---------- Year slider: on-demand map window ----------
-   Start year slider, 1880–2020, step 1; the end is fixed at the latest
-   year in the map data. Changes are debounced ~600 ms — each new window
-   costs ~15 s of server compute, so the control must never fire a fetch
-   per slider tick. A failed window restores the previous one. */
+   Start year slider, 1880–2016, step 1; the end is fixed at the latest
+   year in the map data. The cap is 2016 because a window needs at
+   least 10 years of data for the Mann-Kendall test (min_n=10) — a
+   2020 window used to return an empty map with 0 significant cells.
+   Changes are debounced ~600 ms — each new window costs ~15 s of
+   server compute, so the control must never fire a fetch per slider
+   tick. Rapid changes are serialised: only the latest request owns
+   the UI (see windowSeq / mapLoadSeq), and a failed window restores
+   EVERYTHING to the previous one — slider, heading, map, leaderboard
+   and stats — never a contradictory mix. */
 const yearSlider = $('year-start-slider');
 const yearWindowNote = $('year-window-note');
 let yearSliderTimer = null;
@@ -1841,9 +1921,31 @@ function updateYearWindowLabel() {
   label.textContent = start + '\u2013' + (end === null || end === undefined ? '\u2026' : end);
 }
 async function applyYearWindow(startYear) {
+  /* Fast path: the requested start is already the loaded map's start
+     (e.g. the user dragged back to the current window while a
+     recompute was pending) — no ~15 s fetch, just cancel the pending
+     load and sync the labels. */
+  if (mapData && currentSeason() === 'annual' && startYear === mapData.years[0]) {
+    windowSeq++;
+    cancelPendingMapLoad();
+    windowPending = false;
+    mapWindow = { start: startYear === 1880 ? null : startYear, end: mapData.years[1] };
+    updateYearWindowLabel();
+    updateSeasonLabel();
+    yearWindowNote.hidden = true;
+    yearWindowNote.textContent = '';
+    return;
+  }
+  const seq = ++windowSeq;
   const prev = { start: mapWindow.start, end: mapWindow.end };
-  mapWindow = { start: startYear, end: mapData ? mapData.years[1] : null };
+  /* 1880 is the full period: no start_year parameter, so the fast
+     precomputed map is served instead of a ~15 s on-demand window
+     that would compute the same data. */
+  mapWindow = { start: startYear === 1880 ? null : startYear,
+                end: mapData ? mapData.years[1] : null };
+  windowPending = true;
   updateYearWindowLabel();
+  updateSeasonLabel();
   /* On-demand windows are annual only — a seasonal map is precomputed
      for the full period, so switch back to annual rather than silently
      mixing the two. */
@@ -1851,18 +1953,32 @@ async function applyYearWindow(startYear) {
     seasonSel.value = 'annual';
     updateSeasonLabel();
   }
-  const ok = await loadMap('Recomputing map\u2026 this window takes about 15 seconds.');
-  if (ok) {
+  const result = await loadMap('Recomputing map\u2026 this window takes about 15 seconds.');
+  /* Superseded by a newer window request (or a variable/season
+     change): the newer request owns the UI now, so touch nothing —
+     in particular do NOT run the restore path and clobber it. */
+  if (seq !== windowSeq || result === 'stale') return;
+  windowPending = false;
+  if (result === 'ok') {
+    updateYearWindowLabel();
+    updateSeasonLabel();
     yearWindowNote.hidden = true;
     yearWindowNote.textContent = '';
-  } else {
-    mapWindow = prev;
-    updateYearWindowLabel();
-    await loadMap();
-    yearWindowNote.hidden = false;
-    yearWindowNote.textContent = 'That window could not be computed \u2014 restored the previous window (' +
-      (prev.start ? prev.start + '\u2013' + (prev.end || '') : 'full period') + ').';
+    return;
   }
+  /* Failed: restore EVERYTHING to the previous window — slider
+     position, mapWindow, and the map/leaderboard/stats themselves
+     (mapData was never overwritten by the failed load, so the
+     refetch below is only to repaint the previous window). */
+  mapWindow = prev;
+  yearSlider.value = prev.start === null ? 1880 : prev.start;
+  updateYearWindowLabel();
+  updateSeasonLabel();
+  await loadMap();
+  if (seq !== windowSeq) return;
+  yearWindowNote.hidden = false;
+  yearWindowNote.textContent = 'That window could not be computed \u2014 restored the previous window (' +
+    (prev.start ? prev.start + '\u2013' + (prev.end || '') : 'full period') + ').';
 }
 if (yearSlider) {
   yearSlider.addEventListener('input', () => {
@@ -1870,7 +1986,9 @@ if (yearSlider) {
     clearTimeout(yearSliderTimer);
     yearSliderTimer = setTimeout(() => {
       const start = parseInt(yearSlider.value, 10);
-      if (Number.isFinite(start) && start !== mapWindow.start) applyYearWindow(start);
+      /* 1880 is the full period (mapWindow.start null), not a window. */
+      const effective = start === 1880 ? null : start;
+      if (Number.isFinite(start) && effective !== mapWindow.start) applyYearWindow(start);
     }, 600);
   });
 }
@@ -1881,11 +1999,17 @@ if (yearSlider) {
 function renderHotspotTable(tbodyId, rows) {
   const tbody = $(tbodyId);
   if (!rows || !rows.length) { tbody.innerHTML = ''; return; }
+  /* Place first (a name a judge can read, coordinates under it), then
+     bare signed numbers — the headers already carry the units
+     ("Temp °C/dec", "Precip mm/day/dec"), so repeating them in every
+     cell only made the table wider. p/q stay as fmtSci. */
   tbody.innerHTML = rows.map((r) =>
     '<tr class="row-clickable" data-lat="' + r.lat + '" data-lon="' + r.lon + '" title="Click to fly to this cell">' +
-    '<td>' + fmtLatLon(r.lat, r.lon) + '</td>' +
-    '<td class="num">' + fmtSigned(r.temp_slope_per_decade) + ' \u00B0C/decade</td>' +
-    '<td class="num">' + fmtSigned(r.precip_slope_per_decade) + ' mm/day/decade</td>' +
+    '<td>' + (r.place
+      ? '<strong>' + r.place + '</strong><br><span class="place-coords">' + fmtLatLon(r.lat, r.lon) + '</span>'
+      : fmtLatLon(r.lat, r.lon)) + '</td>' +
+    '<td class="num">' + fmtSigned(r.temp_slope_per_decade, 2) + '</td>' +
+    '<td class="num">' + fmtSigned(r.precip_slope_per_decade, 2) + '</td>' +
     '<td>' + fmtSci(r.temp_p_value) + '</td>' +
     '<td>' + fmtSci(r.temp_q_value) + '</td>' +
     '<td>' + fmtSci(r.precip_p_value) + '</td>' +

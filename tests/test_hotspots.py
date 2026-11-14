@@ -19,9 +19,9 @@ def client():
         yield c
 
 
-FIELDS = {"lat", "lon", "temp_slope_per_decade", "precip_slope_per_decade",
-          "temp_p_value", "precip_p_value", "temp_q_value",
-          "precip_q_value"}
+FIELDS = {"lat", "lon", "place", "temp_slope_per_decade",
+          "precip_slope_per_decade", "temp_p_value", "precip_p_value",
+          "temp_q_value", "precip_q_value"}
 
 
 def test_hotspots_shape(client):
@@ -73,9 +73,28 @@ def test_hotspots_top_cells_are_real(client):
     assert (top_drought["lat"], top_drought["lon"]) == (23.75, 46.25)
     assert top_drought["temp_slope_per_decade"] == pytest.approx(0.57, abs=0.01)
     assert top_drought["precip_slope_per_decade"] < 0
+    assert top_drought["place"] == "Saudi Arabia"
     top_flood = d["flood"][0]
     assert (top_flood["lat"], top_flood["lon"]) == (8.75, -73.75)
     assert top_flood["precip_slope_per_decade"] == pytest.approx(0.462, abs=0.01)
+    assert top_flood["place"] == "Caribbean Sea"
+
+
+def test_hotspots_places_match_cells(client):
+    """Every top-10 row names its real place (test_placenames.py pins
+    the table itself; this pins the endpoint's wiring of it)."""
+    d = client.get("/api/hotspots").get_json()
+    drought_places = [e["place"] for e in d["drought"]]
+    flood_places = [e["place"] for e in d["flood"]]
+    assert drought_places == [
+        "Saudi Arabia", "South Atlantic Ocean", "South Atlantic Ocean",
+        "Arctic Ocean", "Arctic Canada", "Greenland Sea", "Arctic Ocean",
+        "Saudi Arabia", "Saudi Arabia", "Saudi Arabia"]
+    assert flood_places == [
+        "Caribbean Sea", "South Pacific Ocean", "South Pacific Ocean",
+        "Indian Ocean", "South Pacific Ocean", "Philippine Sea",
+        "Indian Ocean", "Philippine Sea", "South Pacific Ocean",
+        "Caribbean Sea"]
 
 
 def test_find_hotspots_top_parameter():

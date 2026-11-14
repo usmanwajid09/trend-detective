@@ -23,7 +23,7 @@ python3 -m venv .venv
 # open http://127.0.0.1:5000
 ```
 
-Tests: `.venv/bin/python -m pytest tests/ -q` (109 tests, all passing).
+Tests: `.venv/bin/python -m pytest tests/ -q` (117 tests, all passing).
 
 To re-download the data: `.venv/bin/python -m src.fetch_data`
 (it only writes real downloads — a failed download is reported, never faked).
@@ -246,6 +246,8 @@ src/
   fetch_data.py   re-downloads the datasets from NASA (--grid for NetCDF)
   grid.py         gridded loaders, seasons, cache build, trend maps;
                   find_hotspots (warming+drying / warming+wetting cells)
+  placenames.py   coarse place names for hotspot cells (tiny lat/lon
+                  box table; None when the cell is in no named region)
   changepoint.py  CUSUM change-point scan + permutation test
   seaice.py       NSIDC Sea Ice Index monthly CSVs -> extent cache
 stats/
@@ -258,7 +260,7 @@ data/             cached real downloads (POWER JSON x2, GISTEMP CSV)
 data/grid/        committed caches: annual means + precomputed trend maps
                   (annual + seasonal DJF/MAM/JJA/SON, both variables)
 data/raw/         raw NetCDF (git-ignored, re-downloadable)
-tests/            pytest: trend maths + Flask routes (109 tests)
+tests/            pytest: trend maths + Flask routes (117 tests)
 .github/workflows/ci.yml   pytest on every push
 ```
 
@@ -282,5 +284,26 @@ disclosure of AI tools used — this line is that disclosure.
   CI, 1981–2024 window, decade table, change point, record years, and the
   Lahore dataset-disagreement note only for the Lahore cell), and
   `/api/hotspots` lists the top warming+drying (drought risk) and
-  warming+wetting (flood risk) cells. Still open: Milestone 6 (final
-  polish).
+  warming+wetting (flood risk) cells, each with a coarse place name
+  from `src/placenames.py` (Saudi Arabia, Caribbean Sea, South Atlantic
+  Ocean, …; coordinates alone when the cell is in no named region).
+- Fix round after a live visual check (2026-11-14): basemap switched to
+  Esri World Light Gray Base — English labels, no API key (OpenStreetMap
+  labels render in local scripts; CARTO light_all returns an "API KEY
+  REQUIRED" watermark tile, verified). Non-significant cells paint as a
+  translucent grey and no-data cells as transparent, so the basemap shows
+  through instead of splotchy grey blocks and a white wash; the legend
+  matches. The year slider caps at 2016 (a window needs ≥ 10 years of
+  data), rapid slider changes are serialised (only the latest load may
+  touch the UI) and a failed window restores slider, heading, map,
+  leaderboard and stats together; the heading always describes the map
+  that is actually loaded. The key-findings counters only animate after
+  the first live fetch resolves, so a recording never captures
+  intermediate numbers. Hotspot tables scroll inside their own card
+  (grid items get `min-width: 0`) and never cause page-level horizontal
+  scrolling. The "6,170 of 7,949" figure in About is labelled as the
+  full record (1880–2026) so it can never contradict the active window.
+  The overlay painting was verified gapless against the real grids
+  (Python reproduction): the edge strip seen when zoomed was the solid
+  grey blocks plus unloaded tile placeholders, not a painting seam.
+  Still open: Milestone 6 (final polish).

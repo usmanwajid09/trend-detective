@@ -307,6 +307,8 @@ def hotspots():
     Both signals must be significant after Benjamini-Hochberg FDR
     (q <= 0.05) on the precomputed annual maps; see
     src/grid.py:find_hotspots for the alignment and the ordering.
+    Each entry also carries a coarse "place" name (src/placenames.py)
+    or null when the cell falls in no named region.
     """
     global _HOTSPOTS_CACHE
     if _HOTSPOTS_CACHE is None:
